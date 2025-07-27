@@ -1,0 +1,17 @@
+pandas
+numpy
+requests
+pillow
+firebase-admin
+onnxruntime
+streamlit
+streamlit-modal
+streamlit-extras
+streamlit-cropper
+streamlit-cookies-manager
+streamlit-pdf-viewer
+jinja2
+weasyprint
+beautifulsoup4
+rembg
+pillow-avif-plugin
