@@ -239,12 +239,20 @@ def find_ggm_information(url, position, products, images, usage):
 
     # Save row
     new_df = pd.DataFrame([new_row])
+    key = f"product_df_{products}"
 
-    if st.session_state[f"product_df_{products}"].empty:
-        st.session_state[f"product_df_{products}"] = new_df.copy()
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
 
-    elif new_row['Art_Nr'] not in st.session_state[f"product_df_{products}"]['Art_Nr'].values and not new_df.empty:
-        st.session_state[f"product_df_{products}"] = pd.concat([st.session_state[f"product_df_{products}"], new_df],ignore_index=True)
+    else:
+        existing_df = st.session_state[key]
+        if (
+            not new_df.empty and
+            'Art_Nr' in existing_df.columns and
+            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
+        ):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+
 
 def find_gh_information(url, position, products, images, usage):
     """
@@ -339,8 +347,16 @@ def find_gh_information(url, position, products, images, usage):
 
     # Save row
     new_df = pd.DataFrame([new_row])
-    if st.session_state[f"product_df_{products}"].empty:
-        st.session_state[f"product_df_{products}"] = new_df.copy()
+    key = f"product_df_{products}"
 
-    elif new_row['Art_Nr'] not in products['Art_Nr'].values and not new_df.empty:
-        st.session_state[f"product_df_{products}"] = pd.concat([st.session_state[f"product_df_{products}"], new_df],ignore_index=True)
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
+
+    else:
+        existing_df = st.session_state[key]
+        if (
+            not new_df.empty and
+            'Art_Nr' in existing_df.columns and
+            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
+        ):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
