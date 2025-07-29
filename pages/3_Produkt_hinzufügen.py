@@ -74,7 +74,8 @@ with st.expander("✏️📦 **Produkte bearbeiten**"):
         column_order=editable_columns,
         column_config={
             "Titel": column_config.TextColumn("Titel", width="large"),
-            "Beschreibung": column_config.TextColumn("Beschreibung", width="large")
+            "Beschreibung": column_config.TextColumn("Beschreibung", width="large"),
+            "Preis": column_config.NumberColumn("Preis")
         },
         key="editable_products_3"
     )
