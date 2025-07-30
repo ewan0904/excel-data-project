@@ -21,7 +21,7 @@ def get_html_template():
     }
 
     @bottom-left {
-        content: "─────────────────────────────────────────────" "\A"
+        content: "────────────────────────────────────────────" "\A"
                 "Bankverbindung" "\A"
                 "Volksbank Schnathorst" "\A"
                 "IBAN: DE96 4926 2364 0070 4710 00" "\A"
@@ -30,7 +30,7 @@ def get_html_template():
     }
 
     @bottom-center {
-        content: "─────────────────────────────────────────────" "\A" 
+        content: "──────────────────────────────────────────────" "\A" 
                 "T.P.O." "\A"
                 "Inh. Daniela Gross" "\A"
                 "In den Fichten 34" "\A"
