@@ -27,7 +27,6 @@ def get_html_template():
                 "IBAN: DE96 4926 2364 0070 4710 00" "\A"
                 "BIC: GENODEM1SNA";
         white-space: pre;
-        padding-left: 8mm;
     }
 
     @bottom-center {
@@ -46,7 +45,6 @@ def get_html_template():
                 "Mail: tpo-gross@outlook.com" "\A"
                 "UST-IdNr.: DE31 8295 117";
         white-space: pre;
-        padding-right: 8mm;
     }
     }
     html {
@@ -64,7 +62,7 @@ def get_html_template():
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin: 30px 30px 0 30px;
+        margin: 30px 0px 0 0px;
     }
 
     .customer-info {
@@ -99,10 +97,10 @@ def get_html_template():
         margin: 0; /* Kein globales margin mehr auf <td>! */
     }
     table {
-        width: calc(100% - 60px);
         border-collapse: separate;
         border-spacing: 0 5px;
-        margin: 18px 30px 0 30px;
+        margin: 18px 0px 0 0px;
+        width: 100%;
     }
     th {
         background-color: #f0f0f0;
@@ -117,12 +115,14 @@ def get_html_template():
         border: 1px solid #e0e0e0;
         border-top: none;
     }
-    tr.product-row {
+    tr.no-split {
         page-break-inside: avoid;
     }
     .product-img {
+        display: block;              /* Makes margin auto work */
+        margin: 0 auto;              /* Center horizontally */
         max-width: 100%;
-        max-height: 100%;
+        max-height: 3.5cm;             /* or another fixed value */
         height: auto;
         object-fit: contain;
     }
@@ -291,26 +291,6 @@ def get_html_template():
     .footer-push {
         height: 100px;
     }
-
-    /* Footer */
-
-    .page-footer {
-        display: flex;
-        justify-content: space-between;
-        gap: 30px;
-        font-size: 7px;
-        color: #222;
-        border-top: 1px solid #ccc;
-        margin: 30px;
-        padding-top: 10px;
-        box-sizing: border-box;
-        page-break-inside: avoid;
-    }
-    .footer-column {
-        width: 30%;
-        line-height: 1.4;
-        margin-top: auto;
-    }
     </style>
     </head>
     <body>
@@ -351,8 +331,8 @@ def get_html_template():
     <colgroup>
         <col style="width: 5%;">
         <col style="width: 25%;">
-        <col style="width: 40%;">
-        <col style="width: 10%;">
+        <col style="width: 45%;">
+        <col style="width: 5%;">
         <col style="width: 10%;">
         <col style="width: 10%;">
     </colgroup>
@@ -368,8 +348,8 @@ def get_html_template():
     </thead>
     <tbody>
     {% for row in products %}
-    <tr class="product-row">
-    <td>{{ row['Positionsbezeichnung'] }}</td>
+    <tr class="product-row{% if loop.index > 1 %} no-split{% endif %}">
+    <td><strong>{{ row['Positionsbezeichnung'] }}</strong></td>
     <td>{% if row['image'] %}<img src="{{ row['image'] }}" class="product-img">{% endif %}</td>
     <td class="product-description">
     {% if row['Alternative'] == True %}
@@ -382,7 +362,12 @@ def get_html_template():
     </td>
     <td>
     {% if not row.Alternative and row.Menge is not none %}
-        {{ row.Menge }}
+        {% if row.Menge == row.Menge|int %}
+            {{ row.Menge|int }}
+        {% else %}
+            {% set formatted = "%.2f"|format(row.Menge) %}
+            {{ formatted.replace('.', ',') }}
+        {% endif %}
     {% endif %}
     </td>
     <td>{{ row.Preis | german_currency }} €</td>
