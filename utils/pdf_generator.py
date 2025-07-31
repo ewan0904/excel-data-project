@@ -46,20 +46,26 @@ def encode_file_to_base64(file_or_image):
     """
     if isinstance(file_or_image, Image):  # PIL image
         buffered = BytesIO()
-        file_or_image.save(buffered, format="PNG")
+        file_or_image.convert("RGB").save(buffered, format="JPEG")
         img_bytes = buffered.getvalue()
 
     elif isinstance(file_or_image, BytesIO):  # already a BytesIO object
         img_bytes = file_or_image.getvalue()
 
-    elif isinstance(file_or_image, (str, os.PathLike)):  # file path
-        with open(file_or_image, "rb") as f:
-            img_bytes = f.read()
-
     else:
         raise TypeError(f"Unsupported image type: {type(file_or_image)}")
 
+    return f"data:image/jpeg;base64,{base64.b64encode(img_bytes).decode()}"
+
+def encode_logo_as_base64_png(path="assets/logo.png"):
+    """
+    Loads the PNG logo from disk and returns a base64-encoded PNG data URI.
+    """
+    with open(path, "rb") as f:
+        img_bytes = f.read()
     return f"data:image/png;base64,{base64.b64encode(img_bytes).decode()}"
+
+
 
 # -----------------
 # --- Build PDF ---
@@ -139,7 +145,7 @@ def build_pdf(product_df, customer_df, custom_images):
         netto=netto,
         mwst=mwst,
         brutto=brutto,
-        logo_base64=encode_file_to_base64("assets/logo.png"),
+        logo_base64=encode_logo_as_base64_png(),
         aktuelles_datum=datetime.today().strftime("%d.%m.%y")
     )
 

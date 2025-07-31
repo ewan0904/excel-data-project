@@ -17,6 +17,34 @@ if not firebase_admin._apps:
 else:
     db = firestore.client()
 
+# ------------------------
+# --- Helper Functions ---
+# ------------------------
+def to_jpeg_rgb(image: Image.Image) -> BytesIO:
+    """
+    Converts a PIL image to RGB JPEG with white background if transparency exists.
+
+    Args:
+        image (PIL.Image): The image to convert.
+
+    Returns:
+        BytesIO: A JPEG image in memory.
+    """
+    buffer = BytesIO()
+    
+    if image.mode in ("RGBA", "LA"):
+        # Ensure image is in RGBA mode
+        image = image.convert("RGBA")
+        # Create white background image
+        background = Image.new("RGBA", image.size, (255, 255, 255, 255))
+        # Composite transparent image onto white background
+        image = Image.alpha_composite(background, image)
+    
+    # Convert to RGB and save as JPEG
+    image.convert("RGB").save(buffer, format="JPEG", quality=75)
+    buffer.seek(0)
+    return buffer
+
 # ---------------------
 # --- GET Firestore ---
 # ---------------------
@@ -178,34 +206,39 @@ def post_image(products, images):
             st.warning(f"⚠️ Kein Bild für {art_nr} gefunden.")
             continue
 
-        blob = bucket.blob(f"product_images/{art_nr}.png")
+        blob = bucket.blob(f"product_images/{art_nr}.jpg")
 
         # 1. UploadedFile
         if isinstance(image_data, st.runtime.uploaded_file_manager.UploadedFile) or hasattr(image_data, "read"):
             image_data.seek(0)
-            blob.upload_from_file(image_data, content_type='image/png')
+            try:
+                pil_image = Image.open(image_data)
+                buffer = to_jpeg_rgb(pil_image)
+                blob.upload_from_file(buffer, content_type='image/jpeg')
+            except Exception as e:
+                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (UploadedFile): {e}")
 
         # 2. PIL Image
         elif isinstance(image_data, Image.Image):
-            buffer = BytesIO()
-            image_data.save(buffer, format="PNG")
-            buffer.seek(0)
-            blob.upload_from_file(buffer, content_type="image/png")
+            try:
+                buffer = to_jpeg_rgb(image_data)
+                blob.upload_from_file(buffer, content_type="image/jpeg")
+            except Exception as e:
+                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (PIL.Image): {e}")
 
         # 3. BytesIO
         elif isinstance(image_data, BytesIO):
             try:
                 image_data.seek(0)
                 pil_image = Image.open(image_data)
-                buffer = BytesIO()
-                pil_image.save(buffer, format="PNG")
-                buffer.seek(0)
-                blob.upload_from_file(buffer, content_type="image/png")
+                buffer = to_jpeg_rgb(pil_image)
+                blob.upload_from_file(buffer, content_type="image/jpeg")
             except Exception as e:
-                st.error(f"❌ {art_nr} could not be processed from BytesIO: {e}")
+                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (BytesIO): {e}")
 
         else:
-            st.warning(f"❌ {art_nr} unsupported type: {type(image_data)}")
+            st.warning(f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)}).")
+
 
 def post_offer(customer, products, images):
     """

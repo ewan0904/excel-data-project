@@ -91,7 +91,7 @@ with st.expander("👨‍💼👩‍💼 **Kunden-Informationen**"):
             st.warning("Bitte fülle alle Informationen aus.")
 
 # --- Produkt-URL Eingabe + Scraping ---
-with st.expander("➕📦 **GGM/GH Produkte hinzufügen**"):
+with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
     with st.form("url_form_1"):
         urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_1")
         submitted = st.form_submit_button("Produkte hinzufügen")
@@ -112,6 +112,8 @@ with st.expander("➕📦 **GGM/GH Produkte hinzufügen**"):
                     find_gh_information(url, idx, 1, 1, 1)
                 elif "ggmgastro" in url:
                     find_ggm_information(url, idx, 1, 1, 1)
+                elif "nordcap" in url:
+                    find_nc_information(url, idx, 1, 1, 1)
 
                 # Update progress
                 progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
@@ -241,9 +243,22 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
             uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"file_{art_nr}")
             if uploaded_file:
                 if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
-                    st.session_state["images_1"][art_nr] = uploaded_file
-                    st.rerun()
+                    image = Image.open(uploaded_file)
 
+                    # Handle transparency by compositing onto white background
+                    if image.mode == "RGBA":
+                        background = Image.new("RGB", image.size, (255, 255, 255))  # white background
+                        background.paste(image, mask=image.split()[3])  # use alpha channel as mask
+                        image = background
+                    else:
+                        image = image.convert("RGB")
+
+                    buffer = BytesIO()
+                    image.save(buffer, format="JPEG")
+                    buffer.seek(0)
+
+                    st.session_state["images_1"][art_nr] = Image.open(buffer)
+                    st.rerun()
 # ---------------
 # --- Sidebar ---
 # ---------------
@@ -286,6 +301,7 @@ if st.session_state.get("pdf_preview_1"):
 
 # --- Datenbank Speicherung ---
 if st.sidebar.button("💾 In Datenbank speichern"):
+
     # Make all Alternative values False by default
     st.session_state["product_df_1"]['Alternative'] = st.session_state["product_df_1"]['Alternative'].fillna(False).astype(bool)
 

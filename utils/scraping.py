@@ -116,6 +116,46 @@ def get_gh_description(soup):
 
     return "\n".join(output_lines)
 
+def get_nc_description(soup):
+    soup = soup.find('div', {'class': 'tab-menu--product js--tab-menu'})
+
+    description = "Beschreibung\n"
+
+    # 1 Beschreibung
+    # product_description = soup.find('div', {'class': 'product--description'})
+    product_description = soup.select_one('.product--description > ul')
+    product_description_without_hinweis = product_description.find_all('li')
+    for item in product_description_without_hinweis:
+        description += f'• {item.get_text(strip=True)} \n'
+
+    # 2 Produktdetails
+    description += "\nProduktdetails\n"
+    product_details = soup.find('div', {'class': 'nc-table-container is-full'})
+    # Each detail seems to be structured in sub-divs
+    details = product_details.find_all('div', recursive=False)
+
+    # Extracting textual information clearly
+    for detail in details:
+        # Find key-value pairs
+        label = detail.find('span', {'class': 'nc-table-title'})
+        value = detail.find('span', {'class': 'nc-table-value'})
+        if label and value:
+            description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
+
+    # 3 Abmessungen
+    description += "\nAbmessungen\n"
+    all_details = soup.find_all('div', {'class': 'nc-table-container is-full'})
+
+    if len(all_details) >= 2:
+        dimension_details = all_details[1].find_all('div', recursive=False)
+        for dimension in dimension_details:
+            label = dimension.find('span', {'class': 'nc-table-title'})
+            value = dimension.find('span', {'class': 'nc-table-value'})
+            if label and value:
+                description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
+    
+    return description
+
 def auto_crop_image_with_rembg(image_url):
     """
     Downloads an image and removes its background using the rembg library.
@@ -135,8 +175,13 @@ def auto_crop_image_with_rembg(image_url):
         bbox = result.getbbox()
         if bbox:
             cropped = result.crop(bbox)
+
+            # Create white background and paste cropped image
+            bg = Image.new("RGB", cropped.size, (255, 255, 255))
+            bg.paste(cropped.convert("RGB"), mask=cropped.split()[3])  # Use alpha as mask
+
             buffer = BytesIO()
-            cropped.save(buffer, format="PNG")
+            bg.save(buffer, format="JPEG")  # <-- Save as JPEG
             buffer.seek(0)
             return buffer
     except Exception as e:
@@ -162,7 +207,7 @@ def extract_urls(text):
     return urls
 
 # ----------------------------------
-# --- Data Extraction for GGM/GH ---
+# --- Data Extraction for GGM/GH/NC ---
 # ----------------------------------
 def find_ggm_information(url, position, products, images, usage):
     """
@@ -210,18 +255,28 @@ def find_ggm_information(url, position, products, images, usage):
             description_text = product_db_data.get("Beschreibung")
             hersteller = product_db_data.get("Hersteller")
 
-    new_row = {
-        'Position': position,
-        '2. Position': "",
-        'Art_Nr': article_number,
-        'Titel': title,
-        'Beschreibung': description_text,
-        'Menge': 1,
-        'Preis': price_float,
-        'Gesamtpreis': price_float,
-        'Hersteller': hersteller,
-        'Alternative': False
-    }
+        new_row = {
+            'Position': position,
+            '2. Position': '',
+            'Art_Nr': article_number,
+            'Titel': title,
+            'Beschreibung': description_text,
+            'Menge': 1,
+            'Preis': price_float,
+            'Gesamtpreis': price_float,
+            'Hersteller': hersteller,
+            'Alternative': False
+        }
+
+    elif usage == 0:
+        new_row = {
+            "Art_Nr": article_number,
+            "Titel": title,
+            "Beschreibung": description_text,
+            "Hersteller": hersteller,
+            "Preis": None,
+            "Alternative": False # Indicate GGM/GH scraped product, instead of self-filled product
+        }
 
     # Image
     image_tag = soup.find('div', {"class": "object-cover lg:cursor-zoom-in"}).find('img', src=lambda x: x and 'ggm.bynder.com' in x)
@@ -335,6 +390,104 @@ def find_gh_information(url, position, products, images, usage):
 
     image_tag = soup.find('div', {"class": "preview"}).find('img', src=lambda x: x and 'api.gastro-hero.de' in x)
     image_url = image_tag.get('src') if image_tag else ''
+    # Auto-crop and save custom image
+    db_image = get_image(new_row['Art_Nr'])
+    if db_image:
+        image = Image.open(BytesIO(db_image))
+        st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    else:
+        image = auto_crop_image_with_rembg(image_url)
+        if image:
+            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+
+    # Save row
+    new_df = pd.DataFrame([new_row])
+    key = f"product_df_{products}"
+
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
+
+    else:
+        existing_df = st.session_state[key]
+        if (
+            not new_df.empty and
+            'Art_Nr' in existing_df.columns and
+            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
+        ):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+
+
+def find_nc_information(url, position, products, images, usage):
+    """
+    Scrapes product information from a NordCap product page and stores it in session state.
+
+    Args:
+        url (str): The URL of the product page.
+        position (int): The product's position in the offer.
+        products (str): The session key name for the product DataFrame.
+        images (str): The session key name for the product images.
+        usage (int): If 1, override with database values when available.
+    """
+
+    # Get the content of the page of the url
+    api_soup = get_soup(url)
+    soup = BeautifulSoup(api_soup, 'html.parser')
+
+    # Article Number
+    article_div = soup.find('span', {'class': 'entry--content'})
+    article_number = article_div.text.strip() if article_div else ''
+
+    # Title
+    title_div = soup.find('h1', {'class': 'product--title'})
+    title = ' '.join(title_div.stripped_strings) if title_div else ''
+
+    # Description
+    description_text = get_nc_description(soup)
+
+    # Hersteller
+    hersteller = 'NC'
+
+    # Price
+    price_div = soup.find('span', {'class': 'price--content content--default'})
+    price_meta = price_div.find('meta', {'itemprop': 'price'})
+    price = price_meta['content'] if price_meta else None
+    price_float = float(price) if price else 0
+
+    # Image
+    image_div = soup.find('span', {'class': 'image--media'}).find('img', src=lambda x: x and 'nordcap.de' in x)
+    image_url = image_div.get('src') if image_div else ''
+
+    # Ask database
+    if usage == 1:
+        product_db_data = get_product(article_number)
+        if product_db_data:
+            title = product_db_data.get("Titel")
+            description_text = product_db_data.get("Beschreibung")
+            hersteller = product_db_data.get("Hersteller")
+
+        new_row = {
+            'Position': position,
+            '2. Position': '',
+            'Art_Nr': article_number,
+            'Titel': title,
+            'Beschreibung': description_text,
+            'Menge': 1,
+            'Preis': price_float,
+            'Gesamtpreis': price_float,
+            'Hersteller': hersteller,
+            'Alternative': False
+        }
+
+    elif usage == 0:
+        new_row = {
+            "Art_Nr": article_number,
+            "Titel": title,
+            "Beschreibung": description_text,
+            "Hersteller": hersteller,
+            "Preis": None,
+            "Alternative": False # Indicate GGM/GH scraped product, instead of self-filled product
+        }
+
     # Auto-crop and save custom image
     db_image = get_image(new_row['Art_Nr'])
     if db_image:
