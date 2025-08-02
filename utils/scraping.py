@@ -602,7 +602,7 @@ def find_nc_information(url, position, products, images, usage):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
 
 def find_sg_information(url, position, products, images, usage):
-    api_soup = get_soup('https://www.stalgast.de/bx10580f-warmeunterschrank-boxversion-2-0-mit-schiebeturen-sockelbau-1000x540x660-mm.html')
+    api_soup = get_soup(url)
     soup = BeautifulSoup(api_soup, 'html.parser')
 
     # Article Number
