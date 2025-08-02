@@ -340,9 +340,9 @@ def find_ggm_information(url, position, products, images, usage):
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
             'Alternative': False,
-            'Breite': int(abmessungen['Breite']),
-            'Tiefe': int(abmessungen['Tiefe']),
-            'Höhe': int(abmessungen['Höhe']),
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
             'Url': url
         }
 
@@ -354,9 +354,9 @@ def find_ggm_information(url, position, products, images, usage):
             "Hersteller": hersteller,
             "Preis": None,
             "Alternative": False,
-            'Breite': int(abmessungen['Breite']),
-            'Tiefe': int(abmessungen['Tiefe']),
-            'Höhe': int(abmessungen['Höhe']),
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
             'Url': url
         }
 
@@ -454,9 +454,9 @@ def find_gh_information(url, position, products, images, usage):
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
             'Alternative': False,            
-            'Breite': int(abmessungen['Breite']),
-            'Tiefe': int(abmessungen['Tiefe']),
-            'Höhe': int(abmessungen['Höhe']),
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
             'Url': url
         }
 
@@ -468,9 +468,9 @@ def find_gh_information(url, position, products, images, usage):
             "Hersteller": hersteller,
             "Preis": None,
             "Alternative": False, # Indicate GGM/GH scraped product, instead of self-filled product
-            'Breite': int(abmessungen['Breite']),
-            'Tiefe': int(abmessungen['Tiefe']),
-            'Höhe': int(abmessungen['Höhe']),
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
             'Url': url
         }
 
@@ -558,9 +558,9 @@ def find_nc_information(url, position, products, images, usage):
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
             'Alternative': False,
-            'Breite': int(abmessungen['Breite außen:']),
-            'Tiefe': int(abmessungen['Tiefe außen:']),
-            'Höhe': int(abmessungen['Höhe außen:']),
+            'Breite': int(abmessungen.get('Breite außen:')) if abmessungen.get('Breite außen:') else None,
+            'Tiefe': int(abmessungen.get('Tiefe außen:')) if abmessungen.get('Tiefe außen:') else None,
+            'Höhe': int(abmessungen.get('Höhe außen:')) if abmessungen.get('Höhe außen:') else None,
             'Url': url
         }
 
@@ -572,9 +572,9 @@ def find_nc_information(url, position, products, images, usage):
             "Hersteller": hersteller,
             "Preis": None,
             "Alternative": False, # Indicate GGM/GH scraped product, instead of self-filled product
-            'Breite': int(abmessungen['Breite außen:']),
-            'Tiefe': int(abmessungen['Tiefe außen:']),
-            'Höhe': int(abmessungen['Höhe außen:']),
+            'Breite': int(abmessungen.get('Breite außen:')) if abmessungen.get('Breite außen:') else None,
+            'Tiefe': int(abmessungen.get('Tiefe außen:')) if abmessungen.get('Tiefe außen:') else None,
+            'Höhe': int(abmessungen.get('Höhe außen:')) if abmessungen.get('Höhe außen:') else None,
             'Url': url
         }
 
@@ -658,9 +658,9 @@ def find_sg_information(url, position, products, images, usage):
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
             'Alternative': False,
-            'Breite': int(abmessungen['Breite [mm]']),
-            'Tiefe': int(abmessungen['Tiefe [mm]']),
-            'Höhe': int(abmessungen['Höhe [mm]']),
+            'Breite': int(abmessungen.get('Breite [mm]')) if abmessungen.get('Breite [mm]') else None,
+            'Tiefe': int(abmessungen.get('Tiefe [mm]')) if abmessungen.get('Tiefe [mm]') else None,
+            'Höhe': int(abmessungen.get('Höhe [mm]')) if abmessungen.get('Höhe [mm]') else None,
             'Url': url
         }
 
@@ -672,9 +672,9 @@ def find_sg_information(url, position, products, images, usage):
             "Hersteller": hersteller,
             "Preis": None,
             "Alternative": False,
-            'Breite': int(abmessungen['Breite [mm]']),
-            'Tiefe': int(abmessungen['Tiefe [mm]']),
-            'Höhe': int(abmessungen['Höhe [mm]']),
+            'Breite': int(abmessungen.get('Breite [mm]')) if abmessungen.get('Breite [mm]') else None,
+            'Tiefe': int(abmessungen.get('Tiefe [mm]')) if abmessungen.get('Tiefe [mm]') else None,
+            'Höhe': int(abmessungen.get('Höhe [mm]')) if abmessungen.get('Höhe [mm]') else None,
             'Url': url
         }
 
