@@ -40,122 +40,6 @@ def get_soup(url):
 # ------------------------
 # --- Helper functions ---
 # ------------------------
-def get_ggm_description(soup):
-    """
-    Parses structured text from the GGM product description HTML.
-
-    Args:
-        soup (BeautifulSoup): The BeautifulSoup object containing HTML content.
-
-    Returns:
-        str: A cleaned and formatted product description.
-    """
-    if soup is None:
-        return ""
-    readable_text = ''
-    current_heading = ''
-    for element in soup.find_all(['p', 'ul']):
-        if element.name == 'p':
-            strong = element.find('strong')
-            if strong:
-                current_heading = strong.get_text(strip=True)
-                readable_text += f"\n{current_heading}:\n"
-        elif element.name == 'ul':
-            for li in element.find_all('li'):
-                li_text = li.get_text(strip=True)
-                readable_text += f"  • {li_text}\n"
-    return readable_text.strip()
-
-def get_gh_description(soup):
-    """
-    Extracts the product description from a GastroHero product page.
-
-    Args:
-        soup (BeautifulSoup): The BeautifulSoup object containing HTML content.
-
-    Returns:
-        str: A formatted string with the product description.
-    """
-    desc_container = soup.find("div", {"data-tracking": "product.tab-container.description"})
-    if not desc_container:
-        return "Description not found"
-
-    tab_content = desc_container.select_one(".tab-content--have-gradient")
-    if not tab_content:
-        return ""
-
-    output_lines = []
-    skip_next_ul = False
-    found_advantages = False
-
-    for tag in tab_content.find_all(["p", "ul"]):
-        text = tag.get_text(strip=True)
-        text_lower = text.lower()
-
-        # Check for "Produktvorteile im Überblick"
-        if "produktvorteile im überblick" in text_lower:
-            found_advantages = True
-            skip_next_ul = True  # skip the list that follows
-            continue
-
-        # If we're skipping the <ul> that immediately follows the heading
-        if skip_next_ul and tag.name == "ul":
-            skip_next_ul = False  # skip this one and stop skipping
-            continue
-
-        # If it's before the "Produktvorteile" section, ignore
-        if not found_advantages:
-            continue
-
-        # Otherwise, keep the content
-        if tag.name == "p" and text:
-            output_lines.append(text)
-        elif tag.name == "ul":
-            items = [f"• {li.get_text(strip=True)}" for li in tag.find_all("li")]
-            output_lines.extend(items)
-
-    return "\n".join(output_lines)
-
-def get_nc_description(soup):
-    soup = soup.find('div', {'class': 'tab-menu--product js--tab-menu'})
-
-    description = "Beschreibung\n"
-
-    # 1 Beschreibung
-    # product_description = soup.find('div', {'class': 'product--description'})
-    product_description = soup.select_one('.product--description > ul')
-    product_description_without_hinweis = product_description.find_all('li')
-    for item in product_description_without_hinweis:
-        description += f'• {item.get_text(strip=True)} \n'
-
-    # 2 Produktdetails
-    description += "\nProduktdetails\n"
-    product_details = soup.find('div', {'class': 'nc-table-container is-full'})
-    # Each detail seems to be structured in sub-divs
-    details = product_details.find_all('div', recursive=False)
-
-    # Extracting textual information clearly
-    for detail in details:
-        # Find key-value pairs
-        label = detail.find('span', {'class': 'nc-table-title'})
-        value = detail.find('span', {'class': 'nc-table-value'})
-        if label and value:
-            description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
-
-    # 3 Abmessungen
-    description += "\nAbmessungen\n"
-    all_details = soup.find_all('div', {'class': 'nc-table-container is-full'})
-
-    if len(all_details) >= 2:
-        dimension_details = all_details[1].find_all('div', recursive=False)
-        for dimension in dimension_details:
-            label = dimension.find('span', {'class': 'nc-table-title'})
-            value = dimension.find('span', {'class': 'nc-table-value'})
-            if label and value:
-                description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
-    
-    return description
-
 def auto_crop_image_with_rembg(image_url):
     """
     Downloads an image and removes its background using the rembg library.
@@ -206,6 +90,197 @@ def extract_urls(text):
         urls.append(full_url.strip())
     return urls
 
+# -------------------------------------
+# --- Helper Functions - Extraction ---
+# -------------------------------------
+def get_ggm_description(soup):
+    """
+    Parses structured text from the GGM product description HTML.
+
+    Args:
+        soup (BeautifulSoup): The BeautifulSoup object containing HTML content.
+
+    Returns:
+        str: A cleaned and formatted product description.
+    """
+    desc_div = soup.find('div', class_='ggmDescription')
+    description = ''
+    for element in desc_div.find_all(['p', 'ul']):
+        if element.name == 'p':
+            strong = element.find('strong')
+            if strong:
+                if description == '':
+                    description += f"{strong.get_text(strip=True)}:\n"
+                else:
+                    description += f"\n{strong.get_text(strip=True)}:\n"
+        elif element.name == 'ul':
+            for li in element.find_all('li'):
+                li_text = li.get_text(strip=True)
+                description += f"  • {li_text}\n"
+
+    abmessungen = {}
+    technical_div = soup.find('div', {'class': 'ggmTechnical'})
+    # Loop through table rows in the ggmTechnical div
+    for row in technical_div.find_all('tr'):
+        th = row.find('th')
+        td = row.find('td')
+        
+        if th and td:
+            label = th.get_text(strip=True)
+            value = td.get_text(strip=True)
+            value = value.replace(" mm", "").replace(".", "")
+            
+            if "Höhe" in label:
+                abmessungen[label] = value
+            elif "Breite" in label:
+                abmessungen[label] = value
+            elif "Tiefe" in label:
+                abmessungen[label] = value
+
+    return description.strip(), abmessungen
+
+def get_gh_description(soup):
+    """
+    Extracts the product description from a GastroHero product page.
+
+    Args:
+        soup (BeautifulSoup): The BeautifulSoup object containing HTML content.
+
+    Returns:
+        str: A formatted string with the product description.
+    """
+    desc_container = soup.find("div", {"data-tracking": "product.tab-container.description"})
+    if not desc_container:
+        return "Description not found"
+
+    tab_content = desc_container.select_one(".tab-content--have-gradient")
+    if not tab_content:
+        return ""
+
+    description = ""
+    skip_next_ul = False
+    found_advantages = False
+
+    for tag in tab_content.find_all(["p", "ul"]):
+        text = tag.get_text(strip=True)
+        text_lower = text.lower()
+
+        # Check for "Produktvorteile im Überblick"
+        if "produktvorteile im überblick" in text_lower:
+            found_advantages = True
+            skip_next_ul = True  # skip the list that follows
+            continue
+
+        # If we're skipping the <ul> that immediately follows the heading
+        if skip_next_ul and tag.name == "ul":
+            skip_next_ul = False  # skip this one and stop skipping
+            continue
+
+        # If it's before the "Produktvorteile" section, ignore
+        if not found_advantages:
+            continue
+
+        # Otherwise, keep the content
+        if tag.name == "p" and text:
+            if description == "":
+                description += f"{text}"
+            else:
+                description += f"\n{text}"
+        elif tag.name == "ul":
+            description += "\n" + "\n".join(f"• {li.get_text(strip=True)}" for li in tag.find_all("li"))
+            description += "\n"
+
+    # Abmessungen
+    abmessungen = {}
+    dimension_div = soup.find('div', {'data-tracking': 'product.tab-container.attributes'})
+
+    # Loop through table rows to find the Maße label
+    for row in dimension_div.find_all('tr', class_='product-attribute-table-row'):
+        label = row.find('th')
+        value = row.find('td')
+        
+        if label and value:
+            label = label.get_text(strip=True)
+            value = value.get_text(strip=True)
+
+            if "maße" in label.lower():
+                parts = [p.strip() for p in value.split('x')]
+                abmessungen = {
+                    "Breite": parts[0],
+                    "Tiefe": parts[1],
+                    "Höhe": parts[2]
+                }
+                break
+
+    return description.strip(), abmessungen
+
+def get_nc_description(soup):
+    soup = soup.find('div', {'class': 'tab-menu--product js--tab-menu'})
+
+    description = "Beschreibung\n"
+    abmessungen = {}
+
+    # 1 Beschreibung
+    # product_description = soup.find('div', {'class': 'product--description'})
+    product_description = soup.select_one('.product--description > ul')
+    product_description_without_hinweis = product_description.find_all('li')
+    for item in product_description_without_hinweis:
+        description += f'• {item.get_text(strip=True)} \n'
+
+    # 2 Produktdetails
+    description += "\nProduktdetails\n"
+    product_details = soup.find('div', {'class': 'nc-table-container is-full'})
+    # Each detail seems to be structured in sub-divs
+    details = product_details.find_all('div', recursive=False)
+
+    # Extracting textual information clearly
+    for detail in details:
+        # Find key-value pairs
+        label = detail.find('span', {'class': 'nc-table-title'})
+        value = detail.find('span', {'class': 'nc-table-value'})
+        if label and value:
+            description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
+
+    # 3 Abmessungen
+    description += "\nAbmessungen\n"
+    all_details = soup.find_all('div', {'class': 'nc-table-container is-full'})
+
+    if len(all_details) >= 2:
+        dimension_details = all_details[1].find_all('div', recursive=False)
+        for dimension in dimension_details:
+            label = dimension.find('span', {'class': 'nc-table-title'})
+            value = dimension.find('span', {'class': 'nc-table-value'})
+            if label and value:
+                label_text = label.get_text(strip=True)
+                value_text = value.get_text(strip=True)
+                description += f"• {label_text} {value_text} \n"
+                if "außen" in label_text.lower():
+                    abmessungen[label_text] = value_text
+    
+    return description.strip(), abmessungen
+
+def get_sg_information(soup):
+    description = ""
+    abmessungen = {}
+    keywords = ['Breite', 'Tiefe', 'Höhe']
+
+    # Get the table with the information
+    table = soup.find('table', id='product-attribute-specs-table')
+
+    # Loop through each row
+    for row in table.find_all('tr'):
+        label = row.find('th', class_='col label')
+        value = row.find('td', class_='col data')
+
+        if label and value:
+            label_text = label.get_text(strip=True)
+            value_text = value.get_text(strip=True)
+            description += f'• {label_text}: {value_text} \n'
+            if any(keyword in label_text for keyword in keywords):
+                abmessungen[label_text] = value_text
+
+    return description.strip(), abmessungen
+
 # ----------------------------------
 # --- Data Extraction for GGM/GH/NC ---
 # ----------------------------------
@@ -234,8 +309,7 @@ def find_ggm_information(url, position, products, images, usage):
     title = title_div.text.strip() if title_div else ''
 
     # Description
-    desc_div = soup.find('div', class_='ggmDescription')
-    description_text = get_ggm_description(desc_div)
+    description, abmessungen = get_ggm_description(soup)
 
     # Price
     price_span = soup.find('span', class_=lambda c: c and 'product-text-shadow' in c)
@@ -252,7 +326,7 @@ def find_ggm_information(url, position, products, images, usage):
         product_db_data = get_product(article_number)
         if product_db_data:
             title = product_db_data.get("Titel")
-            description_text = product_db_data.get("Beschreibung")
+            description = product_db_data.get("Beschreibung")
             hersteller = product_db_data.get("Hersteller")
 
         new_row = {
@@ -260,22 +334,30 @@ def find_ggm_information(url, position, products, images, usage):
             '2. Position': '',
             'Art_Nr': article_number,
             'Titel': title,
-            'Beschreibung': description_text,
+            'Beschreibung': description,
             'Menge': 1,
             'Preis': price_float,
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
-            'Alternative': False
+            'Alternative': False,
+            'Breite': int(abmessungen['Breite']),
+            'Tiefe': int(abmessungen['Tiefe']),
+            'Höhe': int(abmessungen['Höhe']),
+            'Url': url
         }
 
     elif usage == 0:
         new_row = {
             "Art_Nr": article_number,
             "Titel": title,
-            "Beschreibung": description_text,
+            "Beschreibung": description,
             "Hersteller": hersteller,
             "Preis": None,
-            "Alternative": False # Indicate GGM/GH scraped product, instead of self-filled product
+            "Alternative": False,
+            'Breite': int(abmessungen['Breite']),
+            'Tiefe': int(abmessungen['Tiefe']),
+            'Höhe': int(abmessungen['Höhe']),
+            'Url': url
         }
 
     # Image
@@ -283,14 +365,15 @@ def find_ggm_information(url, position, products, images, usage):
     image_url = image_tag.get('src') if image_tag else ''
 
     # Auto-crop and save custom image
-    db_image = get_image(new_row['Art_Nr'])
-    if db_image:
-        image = Image.open(BytesIO(db_image))
-        st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-    else:
-        image = auto_crop_image_with_rembg(image_url)
-        if image:
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
             st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
 
     # Save row
     new_df = pd.DataFrame([new_row])
@@ -301,13 +384,8 @@ def find_ggm_information(url, position, products, images, usage):
 
     else:
         existing_df = st.session_state[key]
-        if (
-            not new_df.empty and
-            'Art_Nr' in existing_df.columns and
-            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
-        ):
+        if (not new_df.empty):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
 
 def find_gh_information(url, position, products, images, usage):
     """
@@ -329,7 +407,7 @@ def find_gh_information(url, position, products, images, usage):
     title_div = soup.find('h1')
     title = title_div.text.strip() if title_div else ''
 
-    description_text = get_gh_description(soup)
+    description_text, abmessungen = get_gh_description(soup)
 
     price_div = soup.find('div', class_='buy-box-price__display')
 
@@ -375,7 +453,11 @@ def find_gh_information(url, position, products, images, usage):
             'Preis': price_float,
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
-            'Alternative': False
+            'Alternative': False,            
+            'Breite': int(abmessungen['Breite']),
+            'Tiefe': int(abmessungen['Tiefe']),
+            'Höhe': int(abmessungen['Höhe']),
+            'Url': url
         }
 
     elif usage == 0:
@@ -385,20 +467,25 @@ def find_gh_information(url, position, products, images, usage):
             "Beschreibung": description_text,
             "Hersteller": hersteller,
             "Preis": None,
-            "Alternative": False # Indicate GGM/GH scraped product, instead of self-filled product
+            "Alternative": False, # Indicate GGM/GH scraped product, instead of self-filled product
+            'Breite': int(abmessungen['Breite']),
+            'Tiefe': int(abmessungen['Tiefe']),
+            'Höhe': int(abmessungen['Höhe']),
+            'Url': url
         }
 
     image_tag = soup.find('div', {"class": "preview"}).find('img', src=lambda x: x and 'api.gastro-hero.de' in x)
     image_url = image_tag.get('src') if image_tag else ''
     # Auto-crop and save custom image
-    db_image = get_image(new_row['Art_Nr'])
-    if db_image:
-        image = Image.open(BytesIO(db_image))
-        st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-    else:
-        image = auto_crop_image_with_rembg(image_url)
-        if image:
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
             st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
 
     # Save row
     new_df = pd.DataFrame([new_row])
@@ -409,13 +496,8 @@ def find_gh_information(url, position, products, images, usage):
 
     else:
         existing_df = st.session_state[key]
-        if (
-            not new_df.empty and
-            'Art_Nr' in existing_df.columns and
-            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
-        ):
+        if (not new_df.empty):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
 
 def find_nc_information(url, position, products, images, usage):
     """
@@ -442,7 +524,7 @@ def find_nc_information(url, position, products, images, usage):
     title = ' '.join(title_div.stripped_strings) if title_div else ''
 
     # Description
-    description_text = get_nc_description(soup)
+    description_text, abmessungen = get_nc_description(soup)
 
     # Hersteller
     hersteller = 'NC'
@@ -475,7 +557,11 @@ def find_nc_information(url, position, products, images, usage):
             'Preis': price_float,
             'Gesamtpreis': price_float,
             'Hersteller': hersteller,
-            'Alternative': False
+            'Alternative': False,
+            'Breite': int(abmessungen['Breite außen:']),
+            'Tiefe': int(abmessungen['Tiefe außen:']),
+            'Höhe': int(abmessungen['Höhe außen:']),
+            'Url': url
         }
 
     elif usage == 0:
@@ -485,18 +571,23 @@ def find_nc_information(url, position, products, images, usage):
             "Beschreibung": description_text,
             "Hersteller": hersteller,
             "Preis": None,
-            "Alternative": False # Indicate GGM/GH scraped product, instead of self-filled product
+            "Alternative": False, # Indicate GGM/GH scraped product, instead of self-filled product
+            'Breite': int(abmessungen['Breite außen:']),
+            'Tiefe': int(abmessungen['Tiefe außen:']),
+            'Höhe': int(abmessungen['Höhe außen:']),
+            'Url': url
         }
 
     # Auto-crop and save custom image
-    db_image = get_image(new_row['Art_Nr'])
-    if db_image:
-        image = Image.open(BytesIO(db_image))
-        st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-    else:
-        image = auto_crop_image_with_rembg(image_url)
-        if image:
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
             st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
 
     # Save row
     new_df = pd.DataFrame([new_row])
@@ -507,9 +598,105 @@ def find_nc_information(url, position, products, images, usage):
 
     else:
         existing_df = st.session_state[key]
-        if (
-            not new_df.empty and
-            'Art_Nr' in existing_df.columns and
-            new_row['Art_Nr'] not in existing_df['Art_Nr'].values
-        ):
+        if (not new_df.empty):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+
+def find_sg_information(url, position, products, images, usage):
+    api_soup = get_soup('https://www.stalgast.de/bx10580f-warmeunterschrank-boxversion-2-0-mit-schiebeturen-sockelbau-1000x540x660-mm.html')
+    soup = BeautifulSoup(api_soup, 'html.parser')
+
+    # Article Number
+    article_number = ""
+    article_div = soup.find('div', {'class': 'additional-attributes-wrapper table-wrapper main-info-data'})
+
+    for p in article_div.find_all('p'):
+        if "artikelnummer" in p.get_text(strip=True).lower():
+            artikel_p = p
+            break
+
+    if artikel_p:
+        article_number = artikel_p.find('b').text.strip()
+
+    # Title 
+    title_h1 = soup.find('h1', {'class': 'page-title'})
+    title_span = title_h1.find('span', {'class': 'base', 'data-ui-id': 'page-title-wrapper'})
+    title = title_span.get_text(strip=True)
+
+    # Description
+    description, abmessungen = get_sg_information(soup)
+
+    # Hersteller
+    hersteller = 'SG'
+
+    # Price
+    price_div = soup.find('div', class_='product-info-price')
+    meta_number = price_div.find('meta', attrs={'content': True})
+    price_value = meta_number['content']
+    price_float = float(price_value)
+
+    # Image
+    image_div = soup.find('div', {'class': 'fotorama__stage__frame fotorama__active fotorama_vertical_ratio fotorama__loaded fotorama__loaded--img'})
+    image_src = image_div.find('img', src=lambda x: x and 'stalgast.de' in x)
+    image_url = image_src.get('src') if image_src else ''
+
+    # Ask database
+    if usage == 1:
+        product_db_data = get_product(article_number)
+        if product_db_data:
+            title = product_db_data.get("Titel")
+            description = product_db_data.get("Beschreibung")
+            hersteller = product_db_data.get("Hersteller")
+
+        new_row = {
+            'Position': position,
+            '2. Position': '',
+            'Art_Nr': article_number,
+            'Titel': title,
+            'Beschreibung': description,
+            'Menge': 1,
+            'Preis': price_float,
+            'Gesamtpreis': price_float,
+            'Hersteller': hersteller,
+            'Alternative': False,
+            'Breite': int(abmessungen['Breite [mm]']),
+            'Tiefe': int(abmessungen['Tiefe [mm]']),
+            'Höhe': int(abmessungen['Höhe [mm]']),
+            'Url': url
+        }
+
+    elif usage == 0:
+        new_row = {
+            "Art_Nr": article_number,
+            "Titel": title,
+            "Beschreibung": description,
+            "Hersteller": hersteller,
+            "Preis": None,
+            "Alternative": False,
+            'Breite': int(abmessungen['Breite [mm]']),
+            'Tiefe': int(abmessungen['Tiefe [mm]']),
+            'Höhe': int(abmessungen['Höhe [mm]']),
+            'Url': url
+        }
+
+    # Auto-crop and save custom image
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
+            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+
+    # Save row
+    new_df = pd.DataFrame([new_row])
+    key = f"product_df_{products}"
+
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
+
+    else:
+        existing_df = st.session_state[key]
+        if (not new_df.empty):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)

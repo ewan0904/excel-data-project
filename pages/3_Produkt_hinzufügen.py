@@ -29,11 +29,14 @@ def reset_product_edit():
         "image_in_edit": {}
     })
 
-# --- Frontend ---
+# -----------------
+# --- Main Page ---
+# -----------------
+# --- Produkt hinzufügen ---
 st.header("Neue GGM/GH Produkte hinzufügen")
 
 # --- Produkt-URL Eingabe + Scraping ---
-with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
+with st.expander("➕📦 **GGM/GH/NC/SG Produkte hinzufügen**"):
     with st.form("url_form_3"):
         urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_3")
         submitted = st.form_submit_button("Produkte hinzufügen")
@@ -56,6 +59,8 @@ with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
                     find_ggm_information(url, idx, 3, 3, 0)
                 elif "nordcap" in url:
                     find_nc_information(url, idx, 3, 3, 0)
+                elif "stalgast" in url:
+                    find_sg_information(url, idx, 3, 3, 0)
 
                 # Update progress
                 progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
@@ -68,7 +73,7 @@ with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
 
 # --- Produkt-Tabelle Bearbeiten ---
 with st.expander("✏️📦 **Produkte bearbeiten**"):
-    editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Preis", "Hersteller"]
+    editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Preis", "Hersteller", "Breite", "Tiefe", "Höhe", "Alternative"]
     edited_df = st.data_editor(
         st.session_state["product_df_3"].reset_index(drop=True),
         use_container_width=True,
@@ -132,7 +137,7 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
             st.markdown(f"**{row['Titel']}**")
             uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"file_{art_nr}")
             if uploaded_file:
-                if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
+                if st.button("💾 Bild speichern", key=f"ph_save_img_{art_nr}{i}"):
                     st.session_state["images_3"][art_nr] = uploaded_file
                     st.rerun()
 
@@ -184,7 +189,7 @@ if product_label != "-- Bitte auswählen --":
     with st.expander("✏️📦 **Produkt bearbeiten**", expanded=True):
         # --- TRUE ---
         if product["Alternative"] == True:
-            editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Preis", "Hersteller"]
+            editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Preis", "Hersteller", "Breite", "Tiefe", "Höhe"]
             edited_df = st.data_editor(
                 st.session_state["product_in_edit"].reset_index(drop=True),
                 use_container_width=True,
@@ -193,7 +198,10 @@ if product_label != "-- Bitte auswählen --":
                 column_config={
                     "Titel": column_config.TextColumn("Titel", width="large"),
                     "Beschreibung": column_config.TextColumn("Beschreibung", width="large"),
-                    "Preis": column_config.NumberColumn("Preis")
+                    "Preis": column_config.NumberColumn("Preis"),
+                    "Breite": column_config.NumberColumn("Breite"),
+                    "Tiefe": column_config.NumberColumn("Tiefe"),
+                    "Höhe": column_config.NumberColumn("Höhe")
                 },
                 key="editable_product_in_edit"
             )
@@ -228,7 +236,7 @@ if product_label != "-- Bitte auswählen --":
         
         # --- FALSE ---
         if product["Alternative"] == False:
-            editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Hersteller"]
+            editable_columns = ["Art_Nr", "Titel", "Beschreibung", "Hersteller", "Breite", "Tiefe", "Höhe"]
             edited_df = st.data_editor(
                 st.session_state["product_in_edit"].reset_index(drop=True),
                 use_container_width=True,
@@ -236,7 +244,10 @@ if product_label != "-- Bitte auswählen --":
                 column_order=editable_columns,
                 column_config={
                     "Titel": column_config.TextColumn("Titel", width="large"),
-                    "Beschreibung": column_config.TextColumn("Beschreibung", width="large")
+                    "Beschreibung": column_config.TextColumn("Beschreibung", width="large"),
+                    "Breite": column_config.NumberColumn("Breite"),
+                    "Tiefe": column_config.NumberColumn("Tiefe"),
+                    "Höhe": column_config.NumberColumn("Höhe")
                 },
                 key="editable_product_in_edit"
             )

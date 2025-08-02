@@ -23,8 +23,20 @@ def initialize_session_state_angebot_erstellen():
 
     if "product_df_1" not in st.session_state:
         st.session_state["product_df_1"] = pd.DataFrame(columns=[
-            'Position', '2. Position', 'Art_Nr', 'Titel', 'Beschreibung', 'Menge',
-            'Preis', 'Gesamtpreis', 'Hersteller', 'Alternative'
+            'Position', 
+            '2. Position',
+            'Art_Nr', 
+            'Titel', 
+            'Beschreibung', 
+            'Menge',
+            'Preis', 
+            'Gesamtpreis', 
+            'Hersteller', 
+            'Alternative',
+            'Breite',
+            'Tiefe',
+            'Höhe',
+            'Url'
         ])
 
     if "images_1" not in st.session_state:
@@ -66,8 +78,20 @@ def initialize_session_state_angebot_suchen():
 
     if "product_df_2" not in st.session_state:
         st.session_state["product_df_2"] = pd.DataFrame(columns=[
-            'Position', '2. Position', 'Art_Nr', 'Titel', 'Beschreibung', 'Menge',
-            'Preis', 'Gesamtpreis', 'Hersteller', 'Alternative'
+            'Position', 
+            '2. Position', 
+            'Art_Nr', 
+            'Titel', 
+            'Beschreibung', 
+            'Menge',
+            'Preis', 
+            'Gesamtpreis', 
+            'Hersteller', 
+            'Alternative',
+            'Breite',
+            'Tiefe',
+            'Höhe',
+            'Url'
         ])
 
     if "pdf_preview_2" not in st.session_state:
@@ -94,7 +118,6 @@ def initialize_session_state_angebot_suchen():
         st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
         st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
 
-
 # --- Session_state for page 3: Produkt hinzufügen ---
 def initialize_session_state_produkt_hinzufügen():
     """
@@ -107,7 +130,11 @@ def initialize_session_state_produkt_hinzufügen():
             'Beschreibung',
             'Hersteller',
             'Preis',
-            'Alternative'
+            'Alternative',
+            'Breite',
+            'Tiefe',
+            'Höhe',
+            'Url'
         ])
 
     if "images_3" not in st.session_state:
@@ -133,7 +160,11 @@ def initialize_session_state_produkt_hinzufügen():
             "Beschreibung",
             "Preis",
             "Hersteller",
-            "Alternative"
+            "Alternative",
+            'Bretie',
+            'Tiefe',
+            'Höhe',
+            'Url'
         ])
 
     if "image_in_edit" not in st.session_state:

@@ -11,6 +11,7 @@ from utils.pdf_generator import *
 from streamlit_pdf_viewer import pdf_viewer
 import re
 from PIL import Image
+from utils.excel_generator import generate_excel_file
 
 # Authentication
 require_login()
@@ -23,8 +24,6 @@ initialize_session_state_angebot_suchen()
 # ------------------------
 # --- Helper Functions ---
 # ------------------------
-
-# --- Reset session_state ---
 def reset():
     st.session_state.update({
         'customer_information_2': {
@@ -42,8 +41,7 @@ def reset():
         "product_df_2": st.session_state["product_df_2"].iloc[0:0],
         "images_2": {}
         })
-    
-# --- Preview PDF ---
+
 def pdf_preview(file_path):
     st.subheader("PDF-Vorschau")
     pdf_viewer(
@@ -53,7 +51,9 @@ def pdf_preview(file_path):
         show_page_separator=True
     )
 
-# Title of the page
+# -----------------
+# --- Main Page ---
+# -----------------
 st.header("Wähle ein Angebot aus:")
 
 col1, col2 = st.columns([5, 3])
@@ -80,8 +80,6 @@ with col2:
     if st.button("🔄 Angebote aktualisieren"):
         st.session_state["all_invoices_df"] = pd.DataFrame(get_all_invoices())
         st.session_state["all_invoices_df"]["label"] = st.session_state["all_invoices_df"].apply(lambda row: f'{row["offer_id"]} | {row["company"]} | {row["first_name"]} {row["surname"]}', axis=1)
-
-
 
 # Reset data if no data is selected
 if selected_label == "-- Bitte auswählen --":
@@ -141,7 +139,7 @@ if selected_label != "-- Bitte auswählen --":
                 st.warning("Bitte fülle alle Informationen aus.")
 
     # --- Produkt-URL Eingabe + Scraping ---  
-    with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
+    with st.expander("➕📦 **GGM/GH/NC/SG Produkte hinzufügen**"):
         with st.form("url_form_2"):
             urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_2")
             submitted = st.form_submit_button("Produkte hinzufügen")
@@ -164,6 +162,8 @@ if selected_label != "-- Bitte auswählen --":
                         find_ggm_information(url, idx, 2, 2, 1)
                     elif "nordcap" in url:
                         find_nc_information(url, idx, 2, 2, 1)
+                    elif "stalgast" in url:
+                        find_sg_information(url, idx, 2, 2, 1)
 
                     # Update progress
                     progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
@@ -196,19 +196,20 @@ if selected_label != "-- Bitte auswählen --":
                         # Retrieve the product from the DB
                         doc_id = st.session_state["all_products_2"][st.session_state["all_products_2"]["label"] == product_label]["id"].iloc[0]
                         db_product = get_product(doc_id)
-                        if db_product["Art_Nr"] not in st.session_state["product_df_2"]["Art_Nr"].values:
+                        db_product['Alternative'] = False
+                        #if db_product["Art_Nr"] not in st.session_state["product_df_2"]["Art_Nr"].values:
 
-                            # Add the product to the product_df_2
-                            st.session_state["product_df_2"] = pd.concat([st.session_state["product_df_2"], pd.DataFrame([db_product])], ignore_index=True)
-                            db_image = get_image(db_product['Art_Nr'])
+                        # Add the product to the product_df_2
+                        st.session_state["product_df_2"] = pd.concat([st.session_state["product_df_2"], pd.DataFrame([db_product])], ignore_index=True)
+                        db_image = get_image(db_product['Art_Nr'])
 
-                            if db_image:
-                                image = Image.open(BytesIO(db_image))
-                                st.session_state[f"images_2"][db_product['Art_Nr']] = image
+                        if db_image:
+                            image = Image.open(BytesIO(db_image))
+                            st.session_state[f"images_2"][db_product['Art_Nr']] = image
 
     # --- Produkt-Tabelle Bearbeiten ---
     with st.expander("✏️📦 **Produkte bearbeiten**"):
-        editable_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Alternative"]
+        editable_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Breite", "Tiefe", "Höhe", "Alternative"]
         edited_df = st.data_editor(
             st.session_state["product_df_2"].reset_index(drop=True),
             use_container_width=True,
@@ -221,7 +222,10 @@ if selected_label != "-- Bitte auswählen --":
                 "Preis": column_config.NumberColumn("Preis"),
                 "Gesamtpreis": column_config.NumberColumn("Gesamtpreis", disabled=True),
                 "Position": column_config.NumberColumn("Position"),
-                "2. Position": column_config.NumberColumn("2. Position")
+                "2. Position": column_config.NumberColumn("2. Position"),
+                "Breite": column_config.NumberColumn("Breite"),
+                "Tiefe": column_config.NumberColumn("Tiefe"),
+                "Höhe": column_config.NumberColumn("Höhe")
             },
             key="editable_products_2"
         )
@@ -279,7 +283,7 @@ if selected_label != "-- Bitte auswählen --":
 
             with cols[1]:
                 st.markdown(f"**{row['Titel']}**")
-                uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"file_{art_nr}")
+                uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"as_file_{art_nr}{i}")
                 if uploaded_file:
                     if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
                         image = Image.open(uploaded_file)
@@ -327,6 +331,17 @@ if selected_label != "-- Bitte auswählen --":
                 file_name=file_name,
                 mime="application/pdf"
             )
+
+    # --- Excel Download ---
+    if st.sidebar.button("📊 Excel-Datei erstellen"):
+        buffer = generate_excel_file(st.session_state["product_df_2"])
+
+        st.sidebar.download_button(
+            label="📥 Excel-Datei herunterladen",
+            data=buffer,
+            file_name=f"excel_liste.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 
     # --- Datenbank Speicherung ---

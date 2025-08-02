@@ -87,7 +87,11 @@ def get_invoice(angebots_id: str) -> pd.DataFrame:
     products_df = pd.DataFrame(product_list)
 
     # Reorder columns
-    ordered_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Alternative"]
+    ordered_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Alternative", "Breite", "Tiefe", "Höhe", "Url"]
+    for col in ordered_columns:
+        if col not in products_df.columns:
+            products_df[col] = None  # or "", or 0, depending on your case
+    
     products_df = products_df[ordered_columns]
 
     # Sort by Position and 2. Position
@@ -239,7 +243,6 @@ def post_image(products, images):
         else:
             st.warning(f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)}).")
 
-
 def post_offer(customer, products, images):
     """
     Uploads a new offer to Firestore including customer info, product list, and images.
@@ -293,7 +296,11 @@ def put_product(product_df: pd.DataFrame):
             "Titel": product['Titel'],
             "Beschreibung": product['Beschreibung'],
             "Preis": product['Preis'],
-            "Alternative": product['Alternative']
+            "Alternative": product['Alternative'],
+            "Breite": product['Breite'],
+            "Tiefe": product['Tiefe'],
+            "Höhe": product['Höhe'],
+            "Url": product['Url']
         }
 
          # Check if a product with the same Art-Nr exists
@@ -348,7 +355,11 @@ def update_product(doc_id, product_df):
                 "Titel": product['Titel'],
                 "Beschreibung": product['Beschreibung'],
                 "Preis": product['Preis'],
-                "Alternative": product['Alternative']
+                "Alternative": product['Alternative'],
+                "Breite": product['Breite'],
+                "Tiefe": product['Tiefe'],
+                "Höhe": product['Höhe'],
+                "Url": product['Url']
             }
         else: 
             data = {
@@ -356,7 +367,11 @@ def update_product(doc_id, product_df):
                 "Hersteller": product['Hersteller'],
                 "Titel": product['Titel'],
                 "Beschreibung": product['Beschreibung'],
-                "Alternative": product['Alternative']
+                "Alternative": product['Alternative'],
+                "Breite": product['Breite'],
+                "Tiefe": product['Tiefe'],
+                "Höhe": product['Höhe'],
+                "Url": product['Url']
             }
         print(data)
 

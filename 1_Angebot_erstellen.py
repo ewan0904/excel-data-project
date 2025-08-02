@@ -11,6 +11,7 @@ from utils.auth import *
 from utils.db import *
 from utils.initialization import initialize_session_state_angebot_erstellen
 import time
+from utils.excel_generator import generate_excel_file
 
 # --- Authentication ---
 require_login()
@@ -55,7 +56,10 @@ def pdf_preview(file_path):
 # ----------------
 st.header("Angebot erstellen")
 
+# -----------------
 # --- Main Page ---
+# -----------------
+
 # --- Kundeninformationen ---
 with st.expander("👨‍💼👩‍💼 **Kunden-Informationen**"):
     with st.form("Speichern"):
@@ -91,7 +95,7 @@ with st.expander("👨‍💼👩‍💼 **Kunden-Informationen**"):
             st.warning("Bitte fülle alle Informationen aus.")
 
 # --- Produkt-URL Eingabe + Scraping ---
-with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
+with st.expander("➕📦 **GGM/GH/NC/SG Produkte hinzufügen**"):
     with st.form("url_form_1"):
         urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_1")
         submitted = st.form_submit_button("Produkte hinzufügen")
@@ -114,6 +118,8 @@ with st.expander("➕📦 **GGM/GH/NC Produkte hinzufügen**"):
                     find_ggm_information(url, idx, 1, 1, 1)
                 elif "nordcap" in url:
                     find_nc_information(url, idx, 1, 1, 1)
+                elif "stalgast" in url:
+                    find_sg_information(url, idx, 1, 1, 1)
 
                 # Update progress
                 progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
@@ -157,19 +163,20 @@ with st.expander("➕📦 **Andere Produkte hinzufügen**"):
                     # Retrieve the product from the DB
                     doc_id = st.session_state["all_products_1"][st.session_state["all_products_1"]["label"] == product_label]["id"].iloc[0]
                     db_product = get_product(doc_id)
-                    if db_product["Art_Nr"] not in st.session_state["product_df_1"]["Art_Nr"].values:
+                    db_product['Alternative'] = False
+                    #if db_product["Art_Nr"] not in st.session_state["product_df_1"]["Art_Nr"].values:
 
-                        # Add the product to the product_df_1
-                        st.session_state["product_df_1"] = pd.concat([st.session_state["product_df_1"], pd.DataFrame([db_product])], ignore_index=True)
-                        db_image = get_image(db_product['Art_Nr'])
+                    # Add the product to the product_df_1
+                    st.session_state["product_df_1"] = pd.concat([st.session_state["product_df_1"], pd.DataFrame([db_product])], ignore_index=True)
+                    db_image = get_image(db_product['Art_Nr'])
 
-                        if db_image:
-                            image = Image.open(BytesIO(db_image))
-                            st.session_state[f"images_1"][db_product['Art_Nr']] = image
+                    if db_image:
+                        image = Image.open(BytesIO(db_image))
+                        st.session_state[f"images_1"][db_product['Art_Nr']] = image
 
 # --- Produkt-Tabelle Bearbeiten ---
 with st.expander("✏️📦 **Produkte bearbeiten**"):
-    editable_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Alternative"]
+    editable_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Breite", "Tiefe", "Höhe", "Alternative"]
     edited_df = st.data_editor(
         st.session_state["product_df_1"].reset_index(drop=True),
         use_container_width=True,
@@ -182,7 +189,10 @@ with st.expander("✏️📦 **Produkte bearbeiten**"):
             "Preis": column_config.NumberColumn("Preis"),
             "Gesamtpreis": column_config.NumberColumn("Gesamtpreis", disabled=True),
             "Position": column_config.NumberColumn("Position"),
-            "2. Position": column_config.NumberColumn("2. Position")
+            "2. Position": column_config.NumberColumn("2. Position"),
+            "Breite": column_config.NumberColumn("Breite"),
+            "Tiefe": column_config.NumberColumn("Tiefe"),
+            "Höhe": column_config.NumberColumn("Höhe")
         },
         key="editable_products_1"
     )
@@ -240,7 +250,7 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
 
         with cols[1]:
             st.markdown(f"**{row['Titel']}**")
-            uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"file_{art_nr}")
+            uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"ae_file_{art_nr}{i}")
             if uploaded_file:
                 if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
                     image = Image.open(uploaded_file)
@@ -259,6 +269,7 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
 
                     st.session_state["images_1"][art_nr] = Image.open(buffer)
                     st.rerun()
+
 # ---------------
 # --- Sidebar ---
 # ---------------
@@ -298,6 +309,17 @@ if st.session_state.get("pdf_preview_1"):
             file_name=file_name,
             mime="application/pdf"
         )
+    
+# --- Excel Download ---
+if st.sidebar.button("📊 Excel-Datei erstellen"):
+    buffer = generate_excel_file(st.session_state["product_df_1"])
+
+    st.sidebar.download_button(
+        label="📥 Excel-Datei herunterladen",
+        data=buffer,
+        file_name=f"excel_liste.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # --- Datenbank Speicherung ---
 if st.sidebar.button("💾 In Datenbank speichern"):
