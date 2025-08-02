@@ -103,39 +103,42 @@ def get_ggm_description(soup):
     Returns:
         str: A cleaned and formatted product description.
     """
-    desc_div = soup.find('div', class_='ggmDescription')
     description = ''
-    for element in desc_div.find_all(['p', 'ul']):
-        if element.name == 'p':
-            strong = element.find('strong')
-            if strong:
-                if description == '':
-                    description += f"{strong.get_text(strip=True)}:\n"
-                else:
-                    description += f"\n{strong.get_text(strip=True)}:\n"
-        elif element.name == 'ul':
-            for li in element.find_all('li'):
-                li_text = li.get_text(strip=True)
-                description += f"  • {li_text}\n"
+    desc_div = soup.find('div', class_='ggmDescription')
+    if desc_div:
+        for element in desc_div.find_all(['p', 'ul']):
+            if element.name == 'p':
+                strong = element.find('strong')
+                if strong:
+                    if description == '':
+                        description += f"{strong.get_text(strip=True)}:\n"
+                    else:
+                        description += f"\n{strong.get_text(strip=True)}:\n"
+            elif element.name == 'ul':
+                for li in element.find_all('li'):
+                    li_text = li.get_text(strip=True)
+                    description += f"  • {li_text}\n"
 
     abmessungen = {}
     technical_div = soup.find('div', {'class': 'ggmTechnical'})
+
     # Loop through table rows in the ggmTechnical div
-    for row in technical_div.find_all('tr'):
-        th = row.find('th')
-        td = row.find('td')
-        
-        if th and td:
-            label = th.get_text(strip=True)
-            value = td.get_text(strip=True)
-            value = value.replace(" mm", "").replace(".", "")
+    if technical_div:
+        for row in technical_div.find_all('tr'):
+            th = row.find('th')
+            td = row.find('td')
             
-            if "Höhe" in label:
-                abmessungen[label] = value
-            elif "Breite" in label:
-                abmessungen[label] = value
-            elif "Tiefe" in label:
-                abmessungen[label] = value
+            if th and td:
+                label = th.get_text(strip=True)
+                value = td.get_text(strip=True)
+                value = value.replace(" mm", "").replace(".", "")
+                
+                if "Höhe" in label:
+                    abmessungen[label] = value
+                elif "Breite" in label:
+                    abmessungen[label] = value
+                elif "Tiefe" in label:
+                    abmessungen[label] = value
 
     return description.strip(), abmessungen
 
@@ -149,68 +152,61 @@ def get_gh_description(soup):
     Returns:
         str: A formatted string with the product description.
     """
-    desc_container = soup.find("div", {"data-tracking": "product.tab-container.description"})
-    if not desc_container:
-        return "Description not found"
-
-    tab_content = desc_container.select_one(".tab-content--have-gradient")
-    if not tab_content:
-        return ""
-
     description = ""
-    skip_next_ul = False
-    found_advantages = False
+    desc_container = soup.find("div", {"data-tracking": "product.tab-container.description"})
+    if desc_container:
 
-    for tag in tab_content.find_all(["p", "ul"]):
-        text = tag.get_text(strip=True)
-        text_lower = text.lower()
+        tab_content = desc_container.select_one(".tab-content--have-gradient")
+        if tab_content:
+            skip_next_ul = False
+            found_advantages = False
 
-        # Check for "Produktvorteile im Überblick"
-        if "produktvorteile im überblick" in text_lower:
-            found_advantages = True
-            skip_next_ul = True  # skip the list that follows
-            continue
+            for tag in tab_content.find_all(["p", "ul"]):
+                text = tag.get_text(strip=True)
+                text_lower = text.lower()
 
-        # If we're skipping the <ul> that immediately follows the heading
-        if skip_next_ul and tag.name == "ul":
-            skip_next_ul = False  # skip this one and stop skipping
-            continue
+                # Check for "Produktvorteile im Überblick"
+                if "produktvorteile im überblick" in text_lower:
+                    found_advantages = True
+                    skip_next_ul = True  # skip the list that follows
+                    continue
 
-        # If it's before the "Produktvorteile" section, ignore
-        if not found_advantages:
-            continue
+                # If we're skipping the <ul> that immediately follows the heading
+                if skip_next_ul and tag.name == "ul":
+                    skip_next_ul = False  # skip this one and stop skipping
+                    continue
 
-        # Otherwise, keep the content
-        if tag.name == "p" and text:
-            if description == "":
-                description += f"{text}"
-            else:
-                description += f"\n{text}"
-        elif tag.name == "ul":
-            description += "\n" + "\n".join(f"• {li.get_text(strip=True)}" for li in tag.find_all("li"))
-            description += "\n"
+                # If it's before the "Produktvorteile" section, ignore
+                if not found_advantages:
+                    continue
+
+                # Otherwise, keep the content
+                if tag.name == "p" and text:
+                    if description == "":
+                        description += f"{text}"
+                    else:
+                        description += f"\n{text}"
+                elif tag.name == "ul":
+                    description += "\n" + "\n".join(f"• {li.get_text(strip=True)}" for li in tag.find_all("li"))
+                    description += "\n"
 
     # Abmessungen
     abmessungen = {}
-    dimension_div = soup.find('div', {'data-tracking': 'product.tab-container.attributes'})
+    dimension_div = soup.find('div', {'class': 'feature-list'})
 
     # Loop through table rows to find the Maße label
-    for row in dimension_div.find_all('tr', class_='product-attribute-table-row'):
-        label = row.find('th')
-        value = row.find('td')
-        
-        if label and value:
-            label = label.get_text(strip=True)
-            value = value.get_text(strip=True)
-
-            if "maße" in label.lower():
-                parts = [p.strip() for p in value.split('x')]
-                abmessungen = {
-                    "Breite": parts[0],
-                    "Tiefe": parts[1],
-                    "Höhe": parts[2]
-                }
-                break
+    for li in dimension_div.find_all('li'):
+        li_text = li.get_text(strip=True)
+        if "produktmaße" in li_text.lower():
+            # Extract numbers using regex (e.g. 1316 x 885 x 710)
+                match = re.search(r"(\d+)\s*x\s*(\d+)\s*x\s*(\d+)", li_text)
+                if match:
+                    breite, tiefe, höhe = match.groups()
+                    abmessungen = {
+                        "Breite": int(breite),
+                        "Tiefe": int(tiefe),
+                        "Höhe": int(höhe)
+                    }   
 
     return description.strip(), abmessungen
 
@@ -223,23 +219,26 @@ def get_nc_description(soup):
     # 1 Beschreibung
     # product_description = soup.find('div', {'class': 'product--description'})
     product_description = soup.select_one('.product--description > ul')
-    product_description_without_hinweis = product_description.find_all('li')
-    for item in product_description_without_hinweis:
-        description += f'• {item.get_text(strip=True)} \n'
+    if product_description:
+        product_description_without_hinweis = product_description.find_all('li')
+        for item in product_description_without_hinweis:
+            description += f'• {item.get_text(strip=True)} \n'
 
     # 2 Produktdetails
     description += "\nProduktdetails\n"
     product_details = soup.find('div', {'class': 'nc-table-container is-full'})
+    if product_details:
     # Each detail seems to be structured in sub-divs
-    details = product_details.find_all('div', recursive=False)
+        details = product_details.find_all('div', recursive=False)
+        if details:
 
-    # Extracting textual information clearly
-    for detail in details:
-        # Find key-value pairs
-        label = detail.find('span', {'class': 'nc-table-title'})
-        value = detail.find('span', {'class': 'nc-table-value'})
-        if label and value:
-            description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
+            # Extracting textual information clearly
+            for detail in details:
+                # Find key-value pairs
+                label = detail.find('span', {'class': 'nc-table-title'})
+                value = detail.find('span', {'class': 'nc-table-value'})
+                if label and value:
+                    description += f"• {label.get_text(strip=True)} {value.get_text(strip=True)} \n"
 
     # 3 Abmessungen
     description += "\nAbmessungen\n"
@@ -266,18 +265,19 @@ def get_sg_information(soup):
 
     # Get the table with the information
     table = soup.find('table', id='product-attribute-specs-table')
+    if table:
 
-    # Loop through each row
-    for row in table.find_all('tr'):
-        label = row.find('th', class_='col label')
-        value = row.find('td', class_='col data')
+        # Loop through each row
+        for row in table.find_all('tr'):
+            label = row.find('th', class_='col label')
+            value = row.find('td', class_='col data')
 
-        if label and value:
-            label_text = label.get_text(strip=True)
-            value_text = value.get_text(strip=True)
-            description += f'• {label_text}: {value_text} \n'
-            if any(keyword in label_text for keyword in keywords):
-                abmessungen[label_text] = value_text
+            if label and value:
+                label_text = label.get_text(strip=True)
+                value_text = value.get_text(strip=True)
+                description += f'• {label_text}: {value_text} \n'
+                if any(keyword in label_text for keyword in keywords):
+                    abmessungen[label_text] = value_text
 
     return description.strip(), abmessungen
 
