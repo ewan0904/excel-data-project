@@ -73,6 +73,7 @@ def get_invoice(angebots_id: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing sorted product details.
     """
+    
     # Get all documents in the 'products' subcollection under this invoice
     products_ref = db.collection("invoices").document(angebots_id).collection("products")
     products_docs = products_ref.stream()

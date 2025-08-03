@@ -12,6 +12,7 @@ from streamlit_pdf_viewer import pdf_viewer
 import re
 from PIL import Image
 from utils.excel_generator import generate_excel_file
+from concurrent.futures import ThreadPoolExecutor
 
 # Authentication
 require_login()
@@ -50,6 +51,15 @@ def pdf_preview(file_path):
         viewer_align="center",
         show_page_separator=True
     )
+
+ # Parallel image fetching
+def fetch_image(art_nr):
+    try:
+        image_bytes = get_image(art_nr)
+        image = Image.open(BytesIO(image_bytes))
+        return art_nr, image
+    except Exception:
+        return art_nr, None  # Optional: log error
 
 # -----------------
 # --- Main Page ---
@@ -95,12 +105,17 @@ if selected_label != "-- Bitte auswählen --":
         customer_db_information["Angebots_ID"] = selected_invoice_row.iloc[0]['offer_id']
         st.session_state["customer_information_2"] = customer_db_information
         st.session_state["product_df_2"] = get_invoice(selected_invoice_row.iloc[0]['invoice_id'])
-        
-        # Fetch images and store them in session_state
-        for art_nr in st.session_state["product_df_2"]["Art_Nr"]:
-            st.session_state["images_2"][art_nr] = Image.open(BytesIO(get_image(art_nr)))
-        st.session_state["selected_label"] = selected_label
 
+        # Fetch images and store them in session_state
+        art_nrs = st.session_state["product_df_2"]["Art_Nr"].tolist()
+        st.session_state["images_2"] = {}
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = executor.map(fetch_image, art_nrs)
+
+        for art_nr, image in results:
+            st.session_state["images_2"][art_nr] = image
+
+        st.session_state["selected_label"] = selected_label
     st.write("---")
 
     # --- Main Page ---

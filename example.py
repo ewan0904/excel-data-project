@@ -215,3 +215,19 @@ ws[f'V{row_6}'] = f'=V{row_4}+V{row_5}'
 ws[f'V{row_6}'].border = thick_bottom
 
 wb.save("example_3.xlsx")
+
+
+    # <div class="totals-box">
+    # <div class="row">
+    #     <div>Netto Gesamt:</div>
+    #     <div>{{ netto | german_currency }} €</div>
+    # </div>
+    # <div class="row">
+    #     <div>19% MwSt:</div>
+    #     <div>{{ mwst | german_currency }} €</div>
+    # </div>
+    # <div class="row total">
+    #     <div>Brutto Gesamt:</div>
+    #     <div>{{ brutto | german_currency }} €</div>
+    # </div>
+    # </div>

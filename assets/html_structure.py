@@ -382,7 +382,7 @@ def get_html_template():
     {% endfor %}
     </tbody>
     </table>
-
+    
     <div class="totals-box">
     <div class="row">
         <div>Netto Gesamt:</div>
