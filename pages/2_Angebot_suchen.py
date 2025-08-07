@@ -336,7 +336,7 @@ if selected_label != "-- Bitte auswählen --":
 
     with st.expander("🏷️ **Zahlungs-Einstellungen**"):
         with st.form("Zahlungen speichern"):
-            rabatt = st.number_input("Rabatt (z.B. 10 für 10%)", value=st.session_state["rabatt"], step=0.1, format="%0.1f")
+            rabatt = st.number_input("Rabatt (z.B. 10 für 10%)", value=float(st.session_state["rabatt"]), step=0.1, format="%0.1f")
             payment_details = st.text_area("Wie viel bei Lieferung und Zahlung? (Falls nichts angegeben, steht bei den Zahlungsbedingungen: Vorkasse)", value=st.session_state["payment_details"])
             zahlungs_button = st.form_submit_button("Zahlungen-Einstellungen speichern")
 
