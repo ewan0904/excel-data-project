@@ -1,7 +1,8 @@
-def get_html_template():
+def get_angebot_template():
     """
     Retrieves the html structure for formatting the offer.
     """
+
     template = """<!DOCTYPE html>
     <html lang="de">
     <head>
@@ -192,20 +193,24 @@ def get_html_template():
     }
 
     .anschreiben {
-        margin-left: 0px;
         line-height: 1.6;
     }
 
     .anschreiben p {
         font-size: 11px;
         line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
     }
 
     .angebot-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin: 20px 30px 5px 30px;
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
     }
 
     .angebot-title {
@@ -382,12 +387,20 @@ def get_html_template():
     {% endfor %}
     </tbody>
     </table>
-    
+
     <div class="totals-box">
     <div class="row">
         <div>Netto Gesamt:</div>
         <div>{{ netto | german_currency }} €</div>
     </div>
+
+    {% if rabatt != 0 %}
+    <div class="row">
+        <div>{{ rabatt }}% Rabatt:</div>
+        <div>-{{ rabatt_num | german_currency }} €</div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div>19% MwSt:</div>
         <div>{{ mwst | german_currency }} €</div>
@@ -657,6 +670,469 @@ def get_html_template():
         juristische als auch natürliche Personen.</p>
 
         </div>
+    </div>
+    </body>
+    </html>"""
+    return template
+
+def get_auftrag_template():
+    """
+    Retrieves the html structure for formatting the offer.
+    """
+    template = """<!DOCTYPE html>
+    <html lang="de">
+    <head>
+    <meta charset="UTF-8">
+    <style>
+    @page {
+    size: A4;
+    margin: 30mm 20mm 30mm 20mm;
+    font-size: 8px;
+    font-family: Helvetica, sans-serif; 
+
+    @bottom {
+        content: "";
+        border-top: 1px solid #ccc;
+        height: 1px;
+        margin-top: 2mm;
+    }
+
+    @bottom-left {
+        content: "────────────────────────────────────────────" "\A"
+                "Bankverbindung" "\A"
+                "Volksbank Schnathorst" "\A"
+                "IBAN: DE96 4926 2364 0070 4710 00" "\A"
+                "BIC: GENODEM1SNA";
+        white-space: pre;
+    }
+
+    @bottom-center {
+        content: "──────────────────────────────────────────────" "\A" 
+                "T.P.O." "\A"
+                "Inh. Daniela Gross" "\A"
+                "In den Fichten 34" "\A"
+                "32584 Löhne";
+        white-space: pre;
+    }
+
+    @bottom-right {
+        content: "────────────────────────────────────────────" "\A"
+                "Tel: 05731 755 13 11" "\A"
+                "Fax: 05731 755 13 12" "\A"
+                "Mail: tpo-gross@outlook.com" "\A"
+                "UST-IdNr.: DE31 8295 117";
+        white-space: pre;
+    }
+    }
+    html {
+    font-size: 8px;
+    line-height: 1.5;
+    }
+
+    body {
+        font-family: Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #222;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin: 30px 0px 0 0px;
+    }
+
+    .customer-info {
+        max-width: 65%;
+    }
+
+    .logo {
+        width: 170px;
+        height: auto;
+    }
+    .logo img {
+        width: 100%;
+        height: auto;
+    }
+
+    /* Struktur */
+    h2 {
+        margin: 30px 30px 5px 30px;
+        font-size: 11px;
+    }
+    p, th {
+        font-size: 9px;
+        margin: 0 30px;
+    }
+
+    table.content-table td {
+        margin: 0 30px;
+    }
+
+    td {
+        font-size: 9px;
+        margin: 0; /* Kein globales margin mehr auf <td>! */
+    }
+    table {
+        border-collapse: separate;
+        border-spacing: 0 5px;
+        margin: 18px 0px 0 0px;
+        width: 100%;
+    }
+    th {
+        background-color: #f0f0f0;
+        text-align: left;
+        padding: 4px;
+        border-bottom: 1px solid #ccc;
+    }
+    td {
+        background-color: #ffffff;
+        padding: 4px;
+        vertical-align: top;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+    }
+    tr.no-split {
+        page-break-inside: avoid;
+    }
+    .product-img {
+        display: block;              /* Makes margin auto work */
+        margin: 0 auto;              /* Center horizontally */
+        max-width: 100%;
+        max-height: 3.5cm;             /* or another fixed value */
+        height: auto;
+        object-fit: contain;
+    }
+    .totals-box {
+        margin: 35px 30px 0 auto;
+        width: 40%;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 8px 10px;
+        font-size: 9px;
+        background-color: #f9f9f9;
+        page-break-inside: avoid;
+    }
+    .totals-box .row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+    .totals-box .row.total {
+        font-weight: bold;
+        border-top: 1px solid #ccc;
+        padding-top: 4px;
+        margin-top: 6px;
+    }
+
+    td.product-description {
+    padding: 2px 4px;
+    line-height: 1.3;
+    }
+
+    .product-title {
+    font-weight: bold;
+    font-size: 9px;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
+    }
+    .product-alternative {
+    font-weight: bold;
+    font-size: 10px;
+    line-height: 1.2;
+    color: #B22222;
+    }
+
+    .product-text {
+    font-size: 9px;
+    margin: 0;
+    padding: 0;
+    line-height: 1.3;
+    white-space: pre-wrap;
+    }
+
+
+    /* Customer block */
+    .customer-block {
+        font-size: 11px;            /* Make it bigger */
+        line-height: 1.2;           /* Improve readability */
+        margin-left: 0px;          /* Align exactly with table */
+        margin-right: 30px;
+        margin-bottom: 15px;
+    }
+
+    .customer-block p {
+        font-size: 11px;
+        line-height: 1.3;
+        margin: 0;
+    }
+
+    .anschreiben {
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .anschreiben p {
+        font-size: 11px;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
+    }
+
+    .angebot-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
+    }
+
+    .angebot-title {
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .angebot-datum {
+        font-size: 11px;
+        color: #444;
+    }
+
+    /* Restlicher Text */
+    .hinweise-block {
+        font-size: 10px;
+        margin-left: 0;
+        line-height: 1.6;
+    }
+
+    .hinweise-block ol {
+        font-size: 9px;
+        padding-left: 2;
+    }
+
+    .hinweise-block li {
+        font-size: 9px;
+        margin-bottom: 4px;
+        padding-left: 14px;
+    }
+    .AGB {
+        font-size: 9px;
+        margin-right: 0px;
+        margin-bottom: 10px;
+    }
+
+    .AGB p {
+        font-size: 9px;
+        margin: 0 30px;
+        margin-bottom: 10px;
+        text-align: justify;
+    }
+
+    .agb-text {
+        margin-top: 4px;
+    }
+
+    .unterschrift {
+        margin-top: 15mm;
+        text-align: right;
+        font-size: 9px;
+    }
+
+    .unterschrift .line {
+        border-top: 1px solid #000;
+        width: 200px;
+        margin-bottom: 2mm;
+        float: right;
+    }
+
+    .unterschrift {
+        margin-top: 15mm;
+        font-size: 9px;
+        text-align: right;
+    }
+
+    .line-with-label {
+        display: inline-block;
+        text-align: center;
+    }
+
+    .line {
+        border-top: 1px solid #000;
+        width: 200px;
+        margin: 0 auto 2mm auto;
+    }
+
+    .label {
+        width: 200px;
+        text-align: center;
+    }
+
+    /* Footer wird durch diese Box "nach unten gedrückt" */
+    .footer-push {
+        height: 100px;
+    }
+    </style>
+    </head>
+    <body>
+
+    <div class="header">
+    <div class="customer-block">
+        <p style="font-size: 16px;"><strong>{{ kunde['Firma'] }}</strong></p>
+        <p>{{ kunde['Anrede'] }} {{ kunde['Vorname'] }} {{ kunde['Nachname'] }}</p>
+        <p>{{ kunde['Adresse'] }}</p>
+        <p>{{ kunde['PLZ'] }} {{ kunde['Ort'] }}</p>
+        <p>Tel.: {{ kunde['Telefonnummer'] }}</p>
+        <p>E-Mail: {{ kunde['E_Mail'] }}</p>
+    </div>
+    <div class="logo">
+        <img src="{{ logo_base64 }}" alt="Logo">
+    </div>
+    </div>
+
+    <div class="angebot-row">
+    <div class="angebot-title">Auftragsbestätigung: {{ angebot_id }}</div>
+    <div class="angebot-datum">{{ aktuelles_datum }}</div>
+    </div>
+
+    <div class="anschreiben">
+    {% if kunde['Anrede'] == 'Herr' %}
+    <p>Sehr geehrter Herr {{ kunde['Nachname'] }},</p>
+    {% elif kunde['Anrede'] == 'Frau' %}
+    <p>Sehr geehrte Frau {{ kunde['Nachname'] }},</p>
+    {% else %}
+    <p>Sehr geehrte Damen und Herren,</p>
+    {% endif %}
+    <p>für Ihren Auftrag und Ihr Interesse an unseren Produkten und Dienstleistungen dürfen wir uns bedanken.</p> 
+    <p>Gerne bieten wir Ihnen wie folgt an.</p>
+    <p>Bei Fragen stehen wir Ihnen gerne jeder Zeit zur Verfügung.</p>
+    </div>
+    <table>
+    <colgroup>
+        <col style="width: 5%;">
+        <col style="width: 25%;">
+        <col style="width: 43%;">
+        <col style="width: 5%;">
+        <col style="width: 12%;">
+        <col style="width: 10%;">
+    </colgroup>
+    <thead>
+    <tr>
+    <th>Pos.</th>
+    <th>Abbildungen ähnlich</th>
+    <th>Bezeichnung</th>
+    <th>Menge</th>
+    <th>Preis/st netto</th>
+    <th>Gesamtpreis</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in products %}
+        {% if not row['Alternative'] %}
+        <tr class="product-row{% if loop.index > 1 %} no-split{% endif %}">
+            <td><strong>{{ row['Positionsbezeichnung'] }}</strong></td>
+            <td>
+                {% if row['image'] %}
+                    <img src="{{ row['image'] }}" class="product-img">
+                {% endif %}
+            </td>
+            <td class="product-description">
+                {% if row['Titel'] %}
+                    <div class="product-title">{{ row['Titel'] }}</div>
+                {% endif %}
+                <div class="product-text">{{ row['Beschreibung'] or '' }}</div>
+            </td>
+            <td>
+                {% if row.Menge is not none %}
+                    {% if row.Menge == row.Menge|int %}
+                        {{ row.Menge|int }}
+                    {% else %}
+                        {% set formatted = "%.2f"|format(row.Menge) %}
+                        {{ formatted.replace('.', ',') }}
+                    {% endif %}
+                {% endif %}
+            </td>
+            <td>{{ row.Preis | german_currency }} €</td>
+            <td>
+                {% if row.Menge is not none %}
+                    {{ row.Gesamtpreis | german_currency }} €
+                {% else %}
+                    {{ row.Preis | german_currency }} €
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    {% endfor %}
+
+    </tbody>
+    </table>
+
+    <div class="totals-box">
+    <div class="row">
+        <div>Netto Gesamt:</div>
+        <div>{{ netto | german_currency }} €</div>
+    </div>
+
+    {% if rabatt != 0 %}
+    <div class="row">
+        <div>{{ rabatt }}% Rabatt:</div>
+        <div>-{{ rabatt_num | german_currency }} €</div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div>19% MwSt:</div>
+        <div>{{ mwst | german_currency }} €</div>
+    </div>
+    <div class="row total">
+        <div>Brutto Gesamt:</div>
+        <div>{{ brutto | german_currency }} €</div>
+    </div>
+    </div>
+
+    <div class="hinweise-block" style="page-break-before: always;">
+    <p><strong>Montagekostenpauschale</strong><br>
+    Konzessionspflichtige Anschlüsse sowie Maurer- und Stemmarbeiten sind nicht im Preis enthalten und müssen bauseits erstellt werden.</p>
+
+    <p>Zusätzliche Arbeiten, Wartezeiten, Verkleidungsbleche, Montage- und Anschlussmaterial werden nach tatsächlichem Aufwand berechnet.</p>
+
+    <p>Um Mehrkosten zu vermeiden, sorgen Sie bitte dafür:</p>
+    <ol>
+        <li>dass der Aufstellungsort frei zugänglich ist</li>
+        <li>dass das Gerät ohne Umstände eintransportiert werden kann (Türbreite etc.)</li>
+        <li>dass der Ablaufanschluss in Gerätenähe zugänglich ist</li>
+        <li>dass der Wasseranschluss in der Nähe (max. 2m) zugänglich ist und ein Absperrhahn versehen ist</li>
+        <li>dass der Stromanschluss in Gerätenähe und idealerweise mit Steckdose ausgerüstet ist,<br>wahlweise auch mit einer Festanschlussdose.
+        <br>(bei Festanschluss müssen die Sicherungen oder Schalter zugänglich sein)</li>
+    </ol>
+
+    <p><strong><em>Alle Leitungen müssen Unterputz verlegt werden!</em></strong></p>
+
+    <p>Bitte beachten Sie, dass über Gas-Geräte eine Dunstabzugshaube bauseits vorhanden sein muss.</p>
+    <p>Der Gas-Anschluß des Gerätes an die Versorgungsleitungen darf nur durch einen konzessionierten Fachbetrieb vorgenommen werden.</p>
+
+    <p class="agb-text"><strong>Zu- und Abluftbauseits</strong></p>
+
+    <p class="agb-text">
+        Der Vertrag wird unter Verwendung unserer Allgemeinen Geschäftsbedingungen, sowie den unten stehenden Zahlungsbedingungen geschlossen.
+        Diese werden Ihnen auf Wunsch kostenlos übersandt und sind im Internet unter www.tpo-gross.de einzusehen. 
+        Konzessionspflichtige Anschlüsse sowie Maurer- und Stemmarbeiten sind nicht im Preis enthalten und müssen bauseits erstellt werden. 
+        Zu evtl. weiteren Entgeltminderungen verweisen wir auf die getroffenen Vereinbarungen.
+    </p>
+
+    <p style="margin-top: 4mm;"><strong>Zahlungsbedingungen:</strong><br>
+    {{ bei_auftrag }}% bei Auftragsvergabe
+    <br>
+    {{ bei_lieferung }}% bei Lieferung
+    </p>
+
+    <div class="unterschrift">
+    <div class="line-with-label">
+        <div class="line"></div>
+        <div class="label">Datum, Unterschrift</div>
+    </div>
+    </div>
     </div>
     </body>
     </html>"""

@@ -13,11 +13,10 @@ import re
 from PIL import Image
 from utils.excel_generator import generate_excel_file
 from concurrent.futures import ThreadPoolExecutor
+from assets.html_structure import get_angebot_template, get_auftrag_template
 
 # Authentication
 require_login()
-if st.sidebar.button("Logout"):
-    logout()
 
 # --- Session State Initialization ---
 initialize_session_state_angebot_suchen()
@@ -40,7 +39,10 @@ def reset():
             "Angebots_ID": ""
         },
         "product_df_2": st.session_state["product_df_2"].iloc[0:0],
-        "images_2": {}
+        "images_2": {},
+        "rabatt": 0,
+        "bei_auftrag": "",
+        "bei_lieferung": ""
         })
 
 def pdf_preview(file_path):
@@ -64,7 +66,7 @@ def fetch_image(art_nr):
 # -----------------
 # --- Main Page ---
 # -----------------
-st.header("Wähle ein Angebot aus:")
+st.header("Wähle einen Eintrag aus:")
 
 col1, col2 = st.columns([5, 3])
 with col1:
@@ -73,6 +75,13 @@ with col1:
 
     # Create options to choose from, the first one does not represent an offer
     options = ["-- Bitte auswählen --"] + st.session_state["all_invoices_df"]["label"].tolist()
+
+    # Only reset if selected_label isn't initialized at all
+    if "selected_label" not in st.session_state:
+        st.session_state["selected_label"] = "-- Bitte auswählen --"
+    elif st.session_state["selected_label"] not in options:
+        st.warning("Das ausgewählte Angebot existiert nicht mehr. Auswahl wurde zurückgesetzt.")
+        st.session_state["selected_label"] = "-- Bitte auswählen --"
 
     # Selectbox for user to pick an invoice
     selected_label = st.selectbox("Angebot", options, index=options.index(st.session_state["selected_label"]))
@@ -104,7 +113,10 @@ if selected_label != "-- Bitte auswählen --":
         customer_db_information = get_customer(selected_invoice_row.iloc[0]["customer_id"])
         customer_db_information["Angebots_ID"] = selected_invoice_row.iloc[0]['offer_id']
         st.session_state["customer_information_2"] = customer_db_information
-        st.session_state["product_df_2"] = get_invoice(selected_invoice_row.iloc[0]['invoice_id'])
+        payment_info, st.session_state["product_df_2"] = get_invoice(selected_invoice_row.iloc[0]['invoice_id'])
+        st.session_state["rabatt"] = payment_info.get("rabatt", 0)
+        st.session_state["bei_auftrag"] = payment_info.get("bei_auftrag", "")
+        st.session_state["bei_lieferung"] = payment_info.get("bei_lieferung", "")
 
         # Fetch images and store them in session_state
         art_nrs = st.session_state["product_df_2"]["Art_Nr"].tolist()
@@ -133,7 +145,7 @@ if selected_label != "-- Bitte auswählen --":
             telefonnummer = st.text_input("Telefonnummer", value=st.session_state["customer_information_2"]["Telefonnummer"])
             email = st.text_input("E-Mail", value=st.session_state["customer_information_2"]["E_Mail"])
             angebots_id = st.text_input("Angebots-ID", value=st.session_state["customer_information_2"]["Angebots_ID"])
-            kunden_button = st.form_submit_button("Kunden-Informationen Speichern")
+            kunden_button = st.form_submit_button("Kunden-Informationen speichern")
 
             if kunden_button:
                 if all([anrede, vorname, nachname, firma, adresse, plz, ort, angebots_id]):
@@ -297,7 +309,12 @@ if selected_label != "-- Bitte auswählen --":
                     st.image(st.session_state["images_2"][art_nr], width=250)
 
             with cols[1]:
-                st.markdown(f"**{row['Titel']}**")
+                st.markdown(f"""
+            <div style='font-size:22px'>
+            <strong>Position:</strong> {row['Position']},&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Art_Nr:</strong> {row['Art_Nr']}<br>
+            <strong>Titel:</strong> {row['Titel']}
+            </div>
+            """, unsafe_allow_html=True)
                 uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"as_file_{art_nr}{i}")
                 if uploaded_file:
                     if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
@@ -318,36 +335,94 @@ if selected_label != "-- Bitte auswählen --":
                         st.session_state["images_2"][art_nr] = Image.open(buffer)
                         st.rerun()
 
-    # --- Sidebar ---
-    st.sidebar.subheader("Funktionen")
-    # --- Neues Angebot Erstellen (Daten zurücksetzen) ---
+    with st.expander("🏷️ **Zahlungs-Einstellungen**"):
+        with st.form("Zahlungen speichern"):
+            rabatt = st.number_input("Rabatt (z.B. 0,10 für 10%)", value=st.session_state["rabatt"])
+            bei_auftragsvergabe = st.text_input("Bei Auftragsvergabe (z.B. 10 für 10%)", value=st.session_state["bei_auftrag"])
+            bei_lieferung = st.text_input("Bei Lieferung (z.B. 90 für 90%)", value=st.session_state["bei_lieferung"])
+            zahlungs_button = st.form_submit_button("Zahlungen-Einstellungen speichern")
 
-    # --- PDF Erstellung ---
-    if st.sidebar.button("📄 PDF anzeigen"):
+            if zahlungs_button:
+                st.session_state["rabatt"] = rabatt
+                st.session_state["bei_auftrag"] = bei_auftragsvergabe
+                st.session_state["bei_lieferung"] = bei_lieferung
+            
+                with st.spinner():
+                    st.success("Zahlungs-Einstellungen gespeichert!")
+
+
+    # ---------------
+    # --- Sidebar ---
+    # ---------------
+
+    # --- Angebot-PDF Erstellung ---
+    st.sidebar.subheader("Angebot-Erstellung")
+    if st.sidebar.button("📄 Angebot-PDF anzeigen"):
         try:
             pdf_path = build_pdf(
                 product_df=st.session_state["product_df_2"],
                 customer_df=pd.DataFrame([st.session_state["customer_information_2"]]),
-                custom_images=st.session_state["images_2"]
+                custom_images=st.session_state["images_2"],
+                template_type=get_angebot_template(),
+                rabatt=st.session_state["rabatt"],
+                bei_auftrag=st.session_state["bei_auftrag"],
+                bei_lieferung=st.session_state["bei_lieferung"]
+
             )
-            st.session_state["pdf_preview_2"] = pdf_path
+            st.session_state["pdf_angebot"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
             pdf_preview(pdf_path)
         except ValueError as e:
             st.error(f"❌ {e}")
-
-    # --- PDF Download
-    if st.session_state.get("pdf_preview_2"):
-        file_name = f"{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
-        with open(st.session_state["pdf_preview_2"], "rb") as f:
+    
+    # --- Angebot-PDF Download
+    if st.session_state.get("pdf_angebot"):
+        file_name = f"angebot_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
+        with open(st.session_state["pdf_angebot"], "rb") as f:
             st.sidebar.download_button(
-                label="⬇️ PDF herunterladen",
+                label="⬇️ Angebot-PDF herunterladen",
                 data=f,
                 file_name=file_name,
                 mime="application/pdf"
             )
+    
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
+
+    # --- Auftrag-PDF Erstellung ---
+    st.sidebar.subheader("Auftrag-Erstellung")
+    if st.sidebar.button("📄 Auftrag-PDF anzeigen"):
+        try:
+            pdf_path = build_pdf(
+                product_df=st.session_state["product_df_2"],
+                customer_df=pd.DataFrame([st.session_state["customer_information_2"]]),
+                custom_images=st.session_state["images_2"],
+                template_type=get_auftrag_template(),
+                rabatt=st.session_state["rabatt"],
+                bei_auftrag=st.session_state["bei_auftrag"],
+                bei_lieferung=st.session_state["bei_lieferung"]
+
+            )
+            st.session_state["pdf_auftrag"] = pdf_path
+            st.success("✅ PDF wurde erfolgreich erstellt.")
+            pdf_preview(pdf_path)
+        except ValueError as e:
+            st.error(f"❌ {e}")
+    # --- Auftrag-PDF Download ---
+    if st.session_state.get("pdf_auftrag"):
+        file_name = f"auftrag_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
+        with open(st.session_state["pdf_auftrag"], "rb") as f:
+            st.sidebar.download_button(
+                label="⬇️ Auftrag-PDF herunterladen",
+                data=f,
+                file_name=file_name,
+                mime="application/pdf"
+            )
+    
+
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
     # --- Excel Download ---
+    st.sidebar.subheader("Excel")
     if st.sidebar.button("📊 Excel-Datei erstellen"):
         buffer = generate_excel_file(st.session_state["product_df_2"])
 
@@ -358,8 +433,10 @@ if selected_label != "-- Bitte auswählen --":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
     # --- Datenbank Speicherung ---
+    st.sidebar.subheader("Datenbank")
     if st.sidebar.button("💾 In Datenbank speichern"):
         # Make all Alternative values False by default
         st.session_state["product_df_2"]['Alternative'] = st.session_state["product_df_2"]['Alternative'].fillna(False).astype(bool)
@@ -372,3 +449,28 @@ if selected_label != "-- Bitte auswählen --":
             customer_id=selected_invoice_row.iloc[0]["customer_id"]
             )
         st.success("✅ Angebot wurde erfolgreich gespeichert.")
+
+    with st.sidebar.popover("❌ Eintrag löschen"):
+            st.markdown("""
+                Die Löschung eines Angebots ist permanent,<br>
+                <b>willst du fortfahren?</b>
+                """, unsafe_allow_html=True
+            )
+
+            if st.button("❌ Löschen"):
+                delete_offer(st.session_state["all_invoices_df"][st.session_state["all_invoices_df"]["label"] == st.session_state["selected_label"]].iloc[0]['invoice_id'])
+
+                # Clear and reset session state
+                reset()
+                st.session_state["selected_label"] = "-- Bitte auswählen --"
+
+                # 🔄 Reload updated invoice list
+                st.session_state["all_invoices_df"] = pd.DataFrame(get_all_invoices())
+                st.session_state["all_invoices_df"]["label"] = st.session_state["all_invoices_df"].apply(
+                    lambda row: f'{row["offer_id"]} | {row["company"]} | {row["first_name"]} {row["surname"]}', axis=1)
+
+                st.rerun()
+
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
+    if st.sidebar.button("Logout"):
+        logout()

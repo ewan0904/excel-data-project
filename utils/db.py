@@ -4,6 +4,8 @@ from firebase_admin import credentials, firestore, storage
 from io import BytesIO
 from PIL import Image
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+import datetime
 
 # ----------------------------
 # --- Initialize Firestore ---
@@ -75,7 +77,8 @@ def get_invoice(angebots_id: str) -> pd.DataFrame:
     """
     
     # Get all documents in the 'products' subcollection under this invoice
-    products_ref = db.collection("invoices").document(angebots_id).collection("products")
+    invoice_ref = db.collection("invoices").document(angebots_id)
+    products_ref = invoice_ref.collection("products")
     products_docs = products_ref.stream()
 
     # Parse product documents into a list of dictionaries
@@ -103,7 +106,10 @@ def get_invoice(angebots_id: str) -> pd.DataFrame:
         inplace=True
     )
 
-    return products_df
+    # Get payment details
+    payment_info = invoice_ref.get().to_dict()
+
+    return payment_info, products_df
 
 def get_all_invoices():
     """
@@ -119,6 +125,7 @@ def get_all_invoices():
         invoice_data = invoice.to_dict()
         customer_id = invoice_data.get("Kunden_ID")
         offer_id = invoice_data.get("Angebots_ID")
+        created_at = invoice_data.get("created_at")
 
         # Fetch corresponding customer
         customer_doc = db.collection("customers").document(customer_id).get()
@@ -130,9 +137,13 @@ def get_all_invoices():
             "company": customer_data.get("Firma"),
             "first_name": customer_data.get("Vorname"),
             "surname": customer_data.get("Nachname"),
-            "customer_id": customer_id
+            "customer_id": customer_id,
+            "created_at": created_at
         }
         data.append(row)
+
+    # 🆕 Sort by created_at (newest first), fall back to None if missing
+    data.sort(key=lambda x: x.get("created_at") or datetime.datetime.min, reverse=True)
 
     return data
 
@@ -193,56 +204,102 @@ def get_image(art_nr: str) -> bytes | None:
 # ----------------------
 # --- POST Firestore ---
 # ----------------------
-def post_image(products, images):
+# def post_image(products, images, max_threads=20):
+#     """
+#     Uploads images to Firebase Storage for each product in the given DataFrame.
+
+#     Args:
+#         products (pd.DataFrame): DataFrame of products.
+#         images (dict): Dictionary of images keyed by article number.
+#     """
+#     bucket = storage.bucket()
+
+#     for _, product in products.iterrows():
+#         art_nr = product['Art_Nr']
+#         image_data = images.get(art_nr)
+
+#         if image_data is None:
+#             st.warning(f"⚠️ Kein Bild für {art_nr} gefunden.")
+#             continue
+
+#         blob = bucket.blob(f"product_images/{art_nr}.jpg")
+
+#         # 1. UploadedFile
+#         if isinstance(image_data, st.runtime.uploaded_file_manager.UploadedFile) or hasattr(image_data, "read"):
+#             image_data.seek(0)
+#             try:
+#                 pil_image = Image.open(image_data)
+#                 buffer = to_jpeg_rgb(pil_image)
+#                 blob.upload_from_file(buffer, content_type='image/jpeg')
+#             except Exception as e:
+#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (UploadedFile): {e}")
+
+#         # 2. PIL Image
+#         elif isinstance(image_data, Image.Image):
+#             try:
+#                 buffer = to_jpeg_rgb(image_data)
+#                 blob.upload_from_file(buffer, content_type="image/jpeg")
+#             except Exception as e:
+#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (PIL.Image): {e}")
+
+#         # 3. BytesIO
+#         elif isinstance(image_data, BytesIO):
+#             try:
+#                 image_data.seek(0)
+#                 pil_image = Image.open(image_data)
+#                 buffer = to_jpeg_rgb(pil_image)
+#                 blob.upload_from_file(buffer, content_type="image/jpeg")
+#             except Exception as e:
+#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (BytesIO): {e}")
+
+#         else:
+#             st.warning(f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)}).")
+
+def post_image(products, images, max_threads=20):
     """
-    Uploads images to Firebase Storage for each product in the given DataFrame.
+    Uploads images to Firebase Storage for each product in the given DataFrame using threading.
 
     Args:
         products (pd.DataFrame): DataFrame of products.
         images (dict): Dictionary of images keyed by article number.
+        max_threads (int): Number of threads to use for parallel upload.
     """
     bucket = storage.bucket()
 
-    for _, product in products.iterrows():
+    def upload_image(product):
         art_nr = product['Art_Nr']
         image_data = images.get(art_nr)
 
         if image_data is None:
-            st.warning(f"⚠️ Kein Bild für {art_nr} gefunden.")
-            continue
+            return f"⚠️ Kein Bild für {art_nr} gefunden."
 
         blob = bucket.blob(f"product_images/{art_nr}.jpg")
 
-        # 1. UploadedFile
-        if isinstance(image_data, st.runtime.uploaded_file_manager.UploadedFile) or hasattr(image_data, "read"):
-            image_data.seek(0)
-            try:
-                pil_image = Image.open(image_data)
-                buffer = to_jpeg_rgb(pil_image)
-                blob.upload_from_file(buffer, content_type='image/jpeg')
-            except Exception as e:
-                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (UploadedFile): {e}")
-
-        # 2. PIL Image
-        elif isinstance(image_data, Image.Image):
-            try:
-                buffer = to_jpeg_rgb(image_data)
-                blob.upload_from_file(buffer, content_type="image/jpeg")
-            except Exception as e:
-                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (PIL.Image): {e}")
-
-        # 3. BytesIO
-        elif isinstance(image_data, BytesIO):
-            try:
+        try:
+            if isinstance(image_data, st.runtime.uploaded_file_manager.UploadedFile) or hasattr(image_data, "read"):
                 image_data.seek(0)
                 pil_image = Image.open(image_data)
-                buffer = to_jpeg_rgb(pil_image)
-                blob.upload_from_file(buffer, content_type="image/jpeg")
-            except Exception as e:
-                st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (BytesIO): {e}")
 
-        else:
-            st.warning(f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)}).")
+            elif isinstance(image_data, Image.Image):
+                pil_image = image_data
+
+            elif isinstance(image_data, BytesIO):
+                image_data.seek(0)
+                pil_image = Image.open(image_data)
+
+            else:
+                return f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)})."
+
+            buffer = to_jpeg_rgb(pil_image)
+            blob.upload_from_file(buffer, content_type="image/jpeg")
+            return f"✅ {art_nr} hochgeladen"
+        
+        except Exception as e:
+            return f"❌ Fehler beim Hochladen von {art_nr}: {e}"
+
+    # Use ThreadPoolExecutor to upload images in parallel
+    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+        executor.map(upload_image, products.to_dict(orient="records"))
 
 def post_offer(customer, products, images):
     """
@@ -264,7 +321,11 @@ def post_offer(customer, products, images):
     # Store the offer in the database
     angebot_Kunden_ID = {
         "Angebots_ID": customer["Angebots_ID"],
-        "Kunden_ID": customer_doc_id
+        "Kunden_ID": customer_doc_id,
+        "rabatt": 0,
+        "bei_auftrag": "",
+        "bei_lieferung": "",
+        "created_at": firestore.SERVER_TIMESTAMP
     }
     _, angebot_doc_ref = db.collection("invoices").add(angebot_Kunden_ID)
 
@@ -331,6 +392,13 @@ def put_offer(customer, products, images, angebots_id, customer_id):
     # Store the images in the database
     post_image(products, images)
 
+    # Update standard invoice information
+    db.collection("invoices").document(angebots_id).update({
+        "rabatt": st.session_state["rabatt"],
+        "bei_auftrag": st.session_state["bei_auftrag"],
+        "bei_lieferung": st.session_state["bei_lieferung"]
+    })
+
     # Delete existing products subcollection
     products_ref = db.collection("invoices").document(angebots_id).collection("products")
     for doc in products_ref.stream():
@@ -377,3 +445,44 @@ def update_product(doc_id, product_df):
         print(data)
 
         db.collection("products").document(doc_id).set(data)
+
+# ------------------------
+# --- DELETE Firestore ---
+# ------------------------
+
+def delete_collection(coll_ref, batch_size=20):
+    """
+    Recursively delete documents in a Firestore collection in batches.
+    """
+    docs = coll_ref.limit(batch_size).stream()
+    deleted = 0
+
+    for doc in docs:
+        doc.reference.delete()
+        deleted += 1
+
+    if deleted >= batch_size:
+        return delete_collection(coll_ref, batch_size)
+
+def delete_offer(invoice_id):
+    # Retrieve the information of the invoice_id
+    invoice_ref = db.collection("invoices").document(invoice_id)
+    invoice = invoice_ref.get()
+    data = invoice.to_dict()
+
+    # Store the customer_ref to delete the customer information
+    kunden_id = data['Kunden_ID']
+
+
+    # Delete the customer using Kunden_ID
+    customer_ref = db.collection("customers").document(kunden_id)
+    customer_ref.delete()
+
+    # Delete subcollections under invoice
+    try:
+        delete_collection(invoice_ref.collection("products"))
+    except Exception as e:
+        print(f"Error deleting subcollection 'products': {e}")
+
+    # Delete the invoice
+    invoice_ref.delete()

@@ -94,9 +94,12 @@ def initialize_session_state_angebot_suchen():
             'Url'
         ])
 
-    if "pdf_preview_2" not in st.session_state:
+    if "pdf_angebot" not in st.session_state:
         st.session_state["pdf_preview_2"] = ""
     
+    if "pdf_auftrag" not in st.session_state:
+        st.session_state["pdf_auftrag"] = ""
+
     if "images_2" not in st.session_state:
         st.session_state["images_2"] = {}
     
@@ -117,6 +120,15 @@ def initialize_session_state_angebot_suchen():
         st.session_state["all_products_2"] = pd.DataFrame(get_all_products())
         st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
         st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
+
+    if "rabatt" not in st.session_state:
+        st.session_state["rabatt"] = 0
+
+    if "bei_auftrag" not in st.session_state:
+        st.session_state["bei_auftrag"] = ""
+
+    if "bei_lieferung" not in st.session_state:
+        st.session_state["bei_lieferung"] = ""
 
 # --- Session_state for page 3: Produkt hinzufügen ---
 def initialize_session_state_produkt_hinzufügen():

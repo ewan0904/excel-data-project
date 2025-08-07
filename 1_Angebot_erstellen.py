@@ -16,10 +16,6 @@ from utils.excel_generator import generate_excel_file
 # --- Authentication ---
 require_login()
 
-# Button to log out
-if st.sidebar.button("Logout"):
-    logout()
-
 # --- Session State Initialization ---
 initialize_session_state_angebot_erstellen()
 
@@ -249,7 +245,12 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
                 st.image(st.session_state["images_1"][art_nr], width=250)
 
         with cols[1]:
-            st.markdown(f"**{row['Titel']}**")
+            st.markdown(f"""
+            <div style='font-size:22px'>
+            <strong>Position:</strong> {row['Position']},&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Art_Nr:</strong> {row['Art_Nr']}<br>
+            <strong>Titel:</strong> {row['Titel']}
+            </div>
+            """, unsafe_allow_html=True)
             uploaded_file = st.file_uploader("Bild ersetzen", type=["png", "jpg", "jpeg"], key=f"ae_file_{art_nr}{i}")
             if uploaded_file:
                 if st.button("💾 Bild speichern", key=f"save_img_{art_nr}"):
@@ -273,55 +274,9 @@ with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=Fal
 # ---------------
 # --- Sidebar ---
 # ---------------
-st.sidebar.subheader("Funktionen")
-
-# --- Neues Angebot Erstellen (Daten zurücksetzen) ---
-with st.sidebar.popover("🧾 Neues Angebot"):
-    st.markdown("""
-                Wenn du ein neues Angebot erstellst,<br> werden alle bisher eingetragenen Informationen zurückgesetzt.<br><br>
-                <b>Willst du fortfahren?</b>
-                """, unsafe_allow_html=True
-            )
-    if st.button("Ja", on_click=reset):
-        st.rerun()
-
-# --- PDF Erstellung ---
-if st.sidebar.button("📄 PDF anzeigen"):
-    try:
-        pdf_path = build_pdf(
-            product_df=st.session_state["product_df_1"],
-            customer_df=pd.DataFrame([st.session_state["customer_information_1"]]),
-            custom_images=st.session_state["images_1"]
-        )
-        st.session_state["pdf_preview_1"] = pdf_path
-        st.success("✅ PDF wurde erfolgreich erstellt.")
-        pdf_preview(pdf_path)
-    except ValueError as e:
-        st.error(f"❌ {e}")
-
-# --- PDF Download
-if st.session_state.get("pdf_preview_1"):
-    file_name = f"{st.session_state['customer_information_1']['Firma']}_{st.session_state['customer_information_1']['Angebots_ID']}.pdf"
-    with open(st.session_state["pdf_preview_1"], "rb") as f:
-        st.sidebar.download_button(
-            label="⬇️ PDF herunterladen",
-            data=f,
-            file_name=file_name,
-            mime="application/pdf"
-        )
-    
-# --- Excel Download ---
-if st.sidebar.button("📊 Excel-Datei erstellen"):
-    buffer = generate_excel_file(st.session_state["product_df_1"])
-
-    st.sidebar.download_button(
-        label="📥 Excel-Datei herunterladen",
-        data=buffer,
-        file_name=f"excel_liste.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
 
 # --- Datenbank Speicherung ---
+st.sidebar.write("Datenbank")
 if st.sidebar.button("💾 In Datenbank speichern"):
 
     # Make all Alternative values False by default
@@ -332,4 +287,12 @@ if st.sidebar.button("💾 In Datenbank speichern"):
         products=st.session_state["product_df_1"],
         images=st.session_state["images_1"]
         )
+    reset() # Resets it, so the user has to use the second tab to further work on the offer
+    st.rerun()
     st.success("✅ Angebot wurde erfolgreich gespeichert.")
+
+# Button to log out
+
+st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
+if st.sidebar.button("Logout"):
+    logout()

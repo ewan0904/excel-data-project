@@ -5,7 +5,6 @@ import pandas as pd
 import os
 import tempfile
 from datetime import datetime
-from assets.html_structure import get_html_template
 from PIL.Image import Image 
 from io import BytesIO
 
@@ -65,12 +64,10 @@ def encode_logo_as_base64_png(path="assets/logo.png"):
         img_bytes = f.read()
     return f"data:image/png;base64,{base64.b64encode(img_bytes).decode()}"
 
-
-
 # -----------------
 # --- Build PDF ---
 # ----------------- 
-def build_pdf(product_df, customer_df, custom_images):
+def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, bei_auftrag, bei_lieferung):
     """
     Builds a PDF document from product and customer data using an HTML template.
 
@@ -131,12 +128,13 @@ def build_pdf(product_df, customer_df, custom_images):
     df_render["Alternative"] = df_render["Alternative"].fillna(False).astype(bool)
     filtered_df = df_render[~df_render["Alternative"]]  # exclude alternatives
     netto = filtered_df["Gesamtpreis"].sum()
+    rabatt_num = (netto * rabatt) / 100
     mwst = netto * 0.19
-    brutto = netto + mwst
+    brutto = netto - rabatt_num + mwst
     customer = customer_df.drop(columns=["Angebots_ID"])
     env = Environment(loader=BaseLoader())
     env.filters['german_currency'] = format_german_currency
-    template = env.from_string(get_html_template())
+    template = env.from_string(template_type)
 
     html = template.render(
         angebot_id=customer_df.iloc[0]["Angebots_ID"],
@@ -145,6 +143,10 @@ def build_pdf(product_df, customer_df, custom_images):
         netto=netto,
         mwst=mwst,
         brutto=brutto,
+        rabatt=rabatt,
+        rabatt_num=rabatt_num,
+        bei_auftrag=bei_auftrag,
+        bei_lieferung=bei_lieferung,
         logo_base64=encode_logo_as_base64_png(),
         aktuelles_datum=datetime.today().strftime("%d.%m.%y")
     )
