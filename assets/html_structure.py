@@ -396,7 +396,7 @@ def get_angebot_template():
 
     {% if rabatt != 0 %}
     <div class="row">
-        <div>{{ rabatt }}% Rabatt:</div>
+        <div>{{ rabatt|replace('.', ',') }}% Rabatt:</div>
         <div>-{{ rabatt_num | german_currency }} €</div>
     </div>
     {% endif %}
@@ -1076,7 +1076,7 @@ def get_auftrag_template():
 
     {% if rabatt != 0 %}
     <div class="row">
-        <div>{{ rabatt }}% Rabatt:</div>
+        <div>{{ rabatt|replace('.', ',') }}% Rabatt:</div>
         <div>-{{ rabatt_num | german_currency }} €</div>
     </div>
     {% endif %}
