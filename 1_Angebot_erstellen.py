@@ -11,7 +11,6 @@ from utils.auth import *
 from utils.db import *
 from utils.initialization import initialize_session_state_angebot_erstellen
 import time
-from utils.excel_generator import generate_excel_file
 
 # --- Authentication ---
 require_login()

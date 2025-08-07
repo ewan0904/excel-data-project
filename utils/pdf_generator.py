@@ -67,7 +67,7 @@ def encode_logo_as_base64_png(path="assets/logo.png"):
 # -----------------
 # --- Build PDF ---
 # ----------------- 
-def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, bei_auftrag, bei_lieferung):
+def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, payment_details):
     """
     Builds a PDF document from product and customer data using an HTML template.
 
@@ -145,8 +145,7 @@ def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, bei
         brutto=brutto,
         rabatt=rabatt,
         rabatt_num=rabatt_num,
-        bei_auftrag=bei_auftrag,
-        bei_lieferung=bei_lieferung,
+        payment_details=payment_details,
         logo_base64=encode_logo_as_base64_png(),
         aktuelles_datum=datetime.today().strftime("%d.%m.%y")
     )

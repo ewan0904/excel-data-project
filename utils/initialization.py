@@ -124,12 +124,9 @@ def initialize_session_state_angebot_suchen():
     if "rabatt" not in st.session_state:
         st.session_state["rabatt"] = 0
 
-    if "bei_auftrag" not in st.session_state:
-        st.session_state["bei_auftrag"] = ""
-
-    if "bei_lieferung" not in st.session_state:
-        st.session_state["bei_lieferung"] = ""
-
+    if "payment_details" not in st.session_state:
+        st.session_state["payment_details"] = ""
+    
 # --- Session_state for page 3: Produkt hinzufügen ---
 def initialize_session_state_produkt_hinzufügen():
     """

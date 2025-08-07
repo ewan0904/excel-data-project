@@ -323,8 +323,7 @@ def post_offer(customer, products, images):
         "Angebots_ID": customer["Angebots_ID"],
         "Kunden_ID": customer_doc_id,
         "rabatt": 0,
-        "bei_auftrag": "",
-        "bei_lieferung": "",
+        "payment_details": "",
         "created_at": firestore.SERVER_TIMESTAMP
     }
     _, angebot_doc_ref = db.collection("invoices").add(angebot_Kunden_ID)
@@ -395,8 +394,7 @@ def put_offer(customer, products, images, angebots_id, customer_id):
     # Update standard invoice information
     db.collection("invoices").document(angebots_id).update({
         "rabatt": st.session_state["rabatt"],
-        "bei_auftrag": st.session_state["bei_auftrag"],
-        "bei_lieferung": st.session_state["bei_lieferung"]
+        "payment_details": st.session_state["payment_details"],
     })
 
     # Delete existing products subcollection

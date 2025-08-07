@@ -41,8 +41,7 @@ def reset():
         "product_df_2": st.session_state["product_df_2"].iloc[0:0],
         "images_2": {},
         "rabatt": 0,
-        "bei_auftrag": "",
-        "bei_lieferung": ""
+        "payment_details": ""
         })
 
 def pdf_preview(file_path):
@@ -338,14 +337,12 @@ if selected_label != "-- Bitte auswählen --":
     with st.expander("🏷️ **Zahlungs-Einstellungen**"):
         with st.form("Zahlungen speichern"):
             rabatt = st.number_input("Rabatt (z.B. 0,10 für 10%)", value=st.session_state["rabatt"])
-            bei_auftragsvergabe = st.text_input("Bei Auftragsvergabe (z.B. 10 für 10%)", value=st.session_state["bei_auftrag"])
-            bei_lieferung = st.text_input("Bei Lieferung (z.B. 90 für 90%)", value=st.session_state["bei_lieferung"])
+            payment_details = st.text_area("Wie viel bei Lieferung und Zahlung? (Falls nichts angegeben, steht bei den Zahlungsbedingungen: Vorkasse)", value=st.session_state["payment_details"])
             zahlungs_button = st.form_submit_button("Zahlungen-Einstellungen speichern")
 
             if zahlungs_button:
                 st.session_state["rabatt"] = rabatt
-                st.session_state["bei_auftrag"] = bei_auftragsvergabe
-                st.session_state["bei_lieferung"] = bei_lieferung
+                st.session_state["payment_details"] = payment_details
             
                 with st.spinner():
                     st.success("Zahlungs-Einstellungen gespeichert!")
@@ -365,9 +362,7 @@ if selected_label != "-- Bitte auswählen --":
                 custom_images=st.session_state["images_2"],
                 template_type=get_angebot_template(),
                 rabatt=st.session_state["rabatt"],
-                bei_auftrag=st.session_state["bei_auftrag"],
-                bei_lieferung=st.session_state["bei_lieferung"]
-
+                payment_details = st.session_state["payment_details"]
             )
             st.session_state["pdf_angebot"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
@@ -392,15 +387,14 @@ if selected_label != "-- Bitte auswählen --":
     st.sidebar.subheader("Auftrag-Erstellung")
     if st.sidebar.button("📄 Auftrag-PDF anzeigen"):
         try:
+            payment_details = st.session_state["payment_details"].replace('\n', '<br>')
             pdf_path = build_pdf(
                 product_df=st.session_state["product_df_2"],
                 customer_df=pd.DataFrame([st.session_state["customer_information_2"]]),
                 custom_images=st.session_state["images_2"],
                 template_type=get_auftrag_template(),
                 rabatt=st.session_state["rabatt"],
-                bei_auftrag=st.session_state["bei_auftrag"],
-                bei_lieferung=st.session_state["bei_lieferung"]
-
+                payment_details = payment_details
             )
             st.session_state["pdf_auftrag"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
