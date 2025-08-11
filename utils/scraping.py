@@ -434,7 +434,7 @@ def find_gh_information(url, position, products, images, usage):
 
     # Hersteller
     hersteller = 'GH'
-
+    
     # Ask database
     if usage == 1:
         product_db_data = get_product(article_number)

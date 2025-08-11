@@ -147,7 +147,7 @@ def get_all_invoices():
 
     return data
 
-def get_product(doc_id):
+def get_product(article_number):
     """
     Retrieves a specific product document from Firestore based on article number.
 
@@ -157,10 +157,9 @@ def get_product(doc_id):
     Returns:
         dict or None: Product data if found; otherwise, None.
     """
-    doc = db.collection("products").document(doc_id).get()
+    doc = db.collection("products").where("Art_Nr", "==", article_number).limit(1).get()
 
-    if doc:
-        return doc.to_dict()
+    return doc[0].to_dict() if doc else None
 
 def get_all_products():
     """
