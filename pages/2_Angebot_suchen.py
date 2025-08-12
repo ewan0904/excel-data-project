@@ -165,7 +165,7 @@ if selected_label != "-- Bitte auswählen --":
                 st.warning("Bitte fülle alle Informationen aus.")
 
     # --- Produkt-URL Eingabe + Scraping ---  
-    with st.expander("➕📦 **GGM/GH/NC/SG Produkte hinzufügen**"):
+    with st.expander("➕📦 **GGM/GH/NC/SG/GG Produkte hinzufügen**"):
         with st.form("url_form_2"):
             urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_2")
             submitted = st.form_submit_button("Produkte hinzufügen")
@@ -179,17 +179,23 @@ if selected_label != "-- Bitte auswählen --":
                 my_bar = st.progress(0, text=progress_text)
 
                 total = len(extracted_urls)
+                failed_urls = []
                 for i, url in enumerate(extracted_urls, start=1):
                     idx = start_pos + i - 1
-
-                    if "gastro-hero" in url:
-                        find_gh_information(url, idx, 2, 2, 1)
-                    elif "ggmgastro" in url:
-                        find_ggm_information(url, idx, 2, 2, 1)
-                    elif "nordcap" in url:
-                        find_nc_information(url, idx, 2, 2, 1)
-                    elif "stalgast" in url:
-                        find_sg_information(url, idx, 2, 2, 1)
+                    try:
+                        if "gastro-hero.de" in url:
+                            find_gh_information(url, idx, 2, 2, 1)
+                        elif "ggmgastro.com" in url:
+                            find_ggm_information(url, idx, 2, 2, 1)
+                        elif "nordcap.de" in url:
+                            find_nc_information(url, idx, 2, 2, 1)
+                        elif "stalgast.de" in url:
+                            find_sg_information(url, idx, 2, 2, 1)
+                        elif "grimm-gastrobedarf.de" in url:
+                            find_gg_information(url, idx, 2, 2, 1)
+                    except Exception as e:
+                        failed_urls.append(url)
+                        continue
 
                     # Update progress
                     progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."

@@ -281,6 +281,53 @@ def get_sg_information(soup):
 
     return description.strip(), abmessungen
 
+def get_gg_description(soup):
+    description = ""
+    abmessungen = {}
+
+    # Get the table with the information
+    desc_div = soup.find('div', {'class': 'product-detail-description-text'})
+    if desc_div:
+        # Loop over each h3 in the div
+        for section in desc_div.find_all("h3"):
+            section_title = section.get_text(strip=True)
+            description += f'{section_title}\n'
+            ul = section.find_next_sibling("ul")
+            
+            if ul:
+                for li in ul.find_all("li"):
+                    item_text = li.get_text(strip=True)
+                    if item_text:  # skip empty items
+                        description += f"• {item_text}\n"
+
+    # Get technical data
+    tech_table = soup.find('table', {'class': 'table table-striped product-detail-properties-table'})
+    if tech_table:
+        description += "Technische Daten\n"
+        for row in tech_table.find_all('tr'):
+            label = row.find('th', 'properties-label') 
+            value = row.find('td', 'properties-value')
+
+            if label and value:
+                label_text = label.get_text(strip=True)
+                value_text = value.get_text(strip=True)
+
+                if label_text == "Abmessung in mm:":
+                    # Extract numbers
+                    match = re.findall(r"\d+", value_text)
+                    if len(match) == 3:
+                        abmessungen = {
+                            "Breite": int(match[0]),
+                            "Tiefe": int(match[1]),
+                            "Höhe": int(match[2])
+                        }
+                    clean_value = re.sub(r"\s+", " ", value_text.replace("\xa0", " ")).strip()
+                    description += f"• {label_text} {clean_value} \n"
+                else:        
+                    description += f'• {label_text} {value_text} \n'
+
+    return description, abmessungen
+
 # ----------------------------------
 # --- Data Extraction for GGM/GH/NC ---
 # ----------------------------------
@@ -434,7 +481,7 @@ def find_gh_information(url, position, products, images, usage):
 
     # Hersteller
     hersteller = 'GH'
-    
+
     # Ask database
     if usage == 1:
         product_db_data = get_product(article_number)
@@ -700,3 +747,104 @@ def find_sg_information(url, position, products, images, usage):
         existing_df = st.session_state[key]
         if (not new_df.empty):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+
+def find_gg_information(url, position, products, images, usage):
+    api_soup = get_soup(url)
+    soup = BeautifulSoup(api_soup, 'html.parser')
+
+    # Article Number
+    article_number = ""
+    article_span = soup.find('span', {'class': 'product-detail-ordernumber'})
+    if article_span:
+        article_number = article_span.get_text(strip=True)
+    
+    # Title
+    title = ""
+    title_div = soup.find('h1', {'class': 'product-detail-name'})
+    if title_div:
+        title = title_div.get_text(strip=True)
+    
+    # Description
+    description, abmessungen = get_gg_description(soup)
+
+    # Hersteller
+    hersteller = 'GG'
+
+    # Price
+    price_p = soup.find('p', {'class': 'product-detail-price'})
+    if price_p:
+        price_text = price_p.get_text(strip=True)
+
+        # Remove currency symbol and spaces
+        price_text = price_text.replace("€", "").replace("\xa0", "").strip()
+        
+        # Convert from German format to float
+        price_float = float(price_text.replace(".", "").replace(",", "."))
+
+    # Image
+    image_div = soup.find('div', {'class': 'gallery-slider-item-container tns-item tns-slide-active'})
+    image_src = image_div.find('img', src=lambda x: x and 'grimm-gastrobedarf.de' in x)
+    image_url = image_src.get('src') if image_src else ''
+
+    # Ask database
+    if usage == 1:
+        product_db_data = get_product(article_number)
+        if product_db_data:
+            title = product_db_data.get("Titel")
+            description = product_db_data.get("Beschreibung")
+            hersteller = product_db_data.get("Hersteller")
+
+        new_row = {
+            'Position': position,
+            '2. Position': '',
+            'Art_Nr': article_number,
+            'Titel': title,
+            'Beschreibung': description,
+            'Menge': 1,
+            'Preis': price_float,
+            'Gesamtpreis': price_float,
+            'Hersteller': hersteller,
+            'Alternative': False,
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
+            'Url': url
+        }
+
+    elif usage == 0:
+        new_row = {
+            "Art_Nr": article_number,
+            "Titel": title,
+            "Beschreibung": description,
+            "Hersteller": hersteller,
+            "Preis": None,
+            "Alternative": False,
+            'Breite': int(abmessungen.get('Breite')) if abmessungen.get('Breite') else None,
+            'Tiefe': int(abmessungen.get('Tiefe')) if abmessungen.get('Tiefe') else None,
+            'Höhe': int(abmessungen.get('Höhe')) if abmessungen.get('Höhe') else None,
+            'Url': url
+        }
+
+    # Auto-crop and save custom image
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
+            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+
+    # Save row
+    new_df = pd.DataFrame([new_row])
+    key = f"product_df_{products}"
+
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
+
+    else:
+        existing_df = st.session_state[key]
+        if (not new_df.empty):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+
