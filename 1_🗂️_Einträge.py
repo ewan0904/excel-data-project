@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(layout="wide")
 from utils.auth import *
 from utils.db import *
 from utils.initialization import initialize_session_state_angebot_suchen
@@ -20,6 +21,14 @@ require_login()
 
 # --- Session State Initialization ---
 initialize_session_state_angebot_suchen()
+
+# --- Sidebar ---
+st.sidebar.header("Funktionen")
+
+if st.sidebar.button("Logout", use_container_width=True):
+    logout()
+
+st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
 # ------------------------
 # --- Helper Functions ---
@@ -54,6 +63,7 @@ def pdf_preview(file_path):
     )
 
  # Parallel image fetching
+
 def fetch_image(art_nr):
     try:
         image_bytes = get_image(art_nr)
@@ -62,12 +72,70 @@ def fetch_image(art_nr):
     except Exception:
         return art_nr, None  # Optional: log error
 
+
+@st.dialog("Neuen Eintrag erstellen")
+def create_new_entry():
+    with st.form("Neuer Eintrag"):
+        anrede_optionen = ["Herr", "Frau"]
+        dialog_anrede = st.radio("Anrede", anrede_optionen, index=anrede_optionen.index("Herr"))
+        dialog_vorname = st.text_input("Vorname")
+        dialog_nachname = st.text_input("Nachname")
+        dialog_firma = st.text_input("Firma")
+        dialog_adresse = st.text_input("Adresse")
+        dialog_plz = st.text_input("PLZ")
+        dialog_ort = st.text_input("Ort")
+        dialog_telefonnummer = st.text_input("Telefonnummer")
+        dialog_email = st.text_input("E-Mail")
+        dialog_angebots_id = st.text_input("Angebots-/Auftrags-ID")
+        
+        dialog_submitted = st.form_submit_button("Eintrag erstellen")
+    
+        if dialog_submitted:
+            if all([dialog_anrede, dialog_vorname, dialog_nachname, dialog_firma, dialog_adresse, dialog_plz, dialog_ort, dialog_telefonnummer, dialog_email, dialog_angebots_id]):
+
+                post_offer(
+                customer={
+                    "Anrede": dialog_anrede,
+                    "Vorname": dialog_vorname,
+                    "Nachname": dialog_nachname,
+                    "Firma": dialog_firma,
+                    "Adresse": dialog_adresse,
+                    "PLZ": dialog_plz,
+                    "Ort": dialog_ort,
+                    "Telefonnummer": dialog_telefonnummer,
+                    "E_Mail": dialog_email,
+                    "Angebots_ID": dialog_angebots_id 
+                },
+                products=pd.DataFrame(columns=[
+                    'Position', 
+                    '2. Position',
+                    'Art_Nr', 
+                    'Titel', 
+                    'Beschreibung', 
+                    'Menge',
+                    'Preis', 
+                    'Gesamtpreis', 
+                    'Hersteller', 
+                    'Alternative',
+                    'Breite',
+                    'Tiefe',
+                    'Höhe',
+                    'Url'
+                ]),
+                images={}
+                )
+
+                with st.spinner():
+                    st.success("Neuen Eintrag erstellt!")
+            else:
+                st.warning("Bitte fülle alle Informationen aus.")
+
 # -----------------
 # --- Main Page ---
 # -----------------
 st.header("Wähle einen Eintrag aus:")
 
-col1, col2 = st.columns([5, 3])
+col1, col2, col3 = st.columns([5, 1.5, 1.5])
 with col1:
     # Add a label column for display
     st.session_state["all_invoices_df"]["label"] = st.session_state["all_invoices_df"].apply(lambda row: f'{row["offer_id"]} | {row["company"]} | {row["first_name"]} {row["surname"]}', axis=1)
@@ -79,11 +147,11 @@ with col1:
     if "selected_label" not in st.session_state:
         st.session_state["selected_label"] = "-- Bitte auswählen --"
     elif st.session_state["selected_label"] not in options:
-        st.warning("Das ausgewählte Angebot existiert nicht mehr. Auswahl wurde zurückgesetzt.")
+        st.warning("Der gewünschte Eintrag existiert nicht mehr. Auswahl wurde zurückgesetzt.")
         st.session_state["selected_label"] = "-- Bitte auswählen --"
 
     # Selectbox for user to pick an invoice
-    selected_label = st.selectbox("Angebot", options, index=options.index(st.session_state["selected_label"]))
+    selected_label = st.selectbox("Eintrag", options, index=options.index(st.session_state["selected_label"]))
 
 with col2:
     st.write(
@@ -95,9 +163,23 @@ with col2:
     """,
     unsafe_allow_html=True
     )
-    if st.button("🔄 Angebote aktualisieren"):
+    if st.button("🔄 Einträge aktualisieren", use_container_width=True):
         st.session_state["all_invoices_df"] = pd.DataFrame(get_all_invoices())
         st.session_state["all_invoices_df"]["label"] = st.session_state["all_invoices_df"].apply(lambda row: f'{row["offer_id"]} | {row["company"]} | {row["first_name"]} {row["surname"]}', axis=1)
+
+with col3:
+    st.write(
+    """<style>
+    [data-testid="stHorizontalBlock"] {
+        align-items: flex-end;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+    )
+    if st.button("➕ Neuen Eintrag erstellen", use_container_width=True):
+        create_new_entry()
+    
 
 # Reset data if no data is selected
 if selected_label == "-- Bitte auswählen --":
@@ -143,7 +225,7 @@ if selected_label != "-- Bitte auswählen --":
             ort = st.text_input("Ort", value=st.session_state["customer_information_2"]["Ort"])
             telefonnummer = st.text_input("Telefonnummer", value=st.session_state["customer_information_2"]["Telefonnummer"])
             email = st.text_input("E-Mail", value=st.session_state["customer_information_2"]["E_Mail"])
-            angebots_id = st.text_input("Angebots-ID", value=st.session_state["customer_information_2"]["Angebots_ID"])
+            angebots_id = st.text_input("Angebots-/Auftrags-ID", value=st.session_state["customer_information_2"]["Angebots_ID"])
             kunden_button = st.form_submit_button("Kunden-Informationen speichern")
 
             if kunden_button:
@@ -161,11 +243,11 @@ if selected_label != "-- Bitte auswählen --":
 
                     with st.spinner():
                         st.success("Kunden-Informationen gespeichert!")
-            else:
-                st.warning("Bitte fülle alle Informationen aus.")
+                else:
+                    st.warning("Bitte fülle alle Informationen aus.")
 
     # --- Produkt-URL Eingabe + Scraping ---  
-    with st.expander("➕📦 **GGM/GH/NC/SG/GG Produkte hinzufügen**"):
+    with st.expander("➕📦 **Produkte hinzufügen**"):
         with st.form("url_form_2"):
             urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_2")
             submitted = st.form_submit_button("Produkte hinzufügen")
@@ -206,38 +288,6 @@ if selected_label != "-- Bitte auswählen --":
 
                 st.session_state.clear_url_input_2 = True
                 st.rerun()
-
-    # --- Produkt Selection from DB ---
-    with st.expander("➕📦 **Andere Produkte hinzufügen**"):
-        db_product_col1, db_product_col2 = st.columns([5, 3])
-
-        # Multi-Select to select the products from the DB
-        with db_product_col1: 
-            selected_db_products = st.multiselect("Produkte auswählen", st.session_state["all_products_2"]["label"])
-
-        # Button to refresh the products fetched from the DB
-        with db_product_col2:
-            st.button("🔄 Produkte aktualisieren")
-            st.session_state["all_products_2"] = pd.DataFrame(get_all_products())
-            st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
-            st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
-
-        # Button to add products to the editing dataframe
-        if st.button("Produkte hinzufügen", key="save_product_db_2"):
-                    for product_label in selected_db_products:
-                        # Retrieve the product from the DB
-                        doc_id = st.session_state["all_products_2"][st.session_state["all_products_2"]["label"] == product_label]["id"].iloc[0]
-                        db_product = get_product(doc_id)
-                        db_product['Alternative'] = False
-                        #if db_product["Art_Nr"] not in st.session_state["product_df_2"]["Art_Nr"].values:
-
-                        # Add the product to the product_df_2
-                        st.session_state["product_df_2"] = pd.concat([st.session_state["product_df_2"], pd.DataFrame([db_product])], ignore_index=True)
-                        db_image = get_image(db_product['Art_Nr'])
-
-                        if db_image:
-                            image = Image.open(BytesIO(db_image))
-                            st.session_state[f"images_2"][db_product['Art_Nr']] = image
 
     # --- Produkt-Tabelle Bearbeiten ---
     with st.expander("✏️📦 **Produkte bearbeiten**"):
@@ -304,7 +354,7 @@ if selected_label != "-- Bitte auswählen --":
                 st.rerun()
 
     # --- Produktbilder Anzeigen / Hochladen ---
-    with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=False):
+    with st.expander("✏️📸 **Produktbilder bearbeiten**", expanded=False):
         for i, row in st.session_state["product_df_2"].iterrows():
             art_nr = row.get("Art_Nr")
             st.write("---")
@@ -316,7 +366,7 @@ if selected_label != "-- Bitte auswählen --":
             with cols[1]:
                 st.markdown(f"""
             <div style='font-size:22px'>
-            <strong>Position:</strong> {row['Position']},&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Art_Nr:</strong> {row['Art_Nr']}<br>
+            <strong>Position:</strong> {int(row['Position'])},&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Art_Nr:</strong> {row['Art_Nr']}<br>
             <strong>Titel:</strong> {row['Titel']}
             </div>
             """, unsafe_allow_html=True)
@@ -353,14 +403,12 @@ if selected_label != "-- Bitte auswählen --":
                 with st.spinner():
                     st.success("Zahlungs-Einstellungen gespeichert!")
 
-
     # ---------------
     # --- Sidebar ---
     # ---------------
-
     # --- Angebot-PDF Erstellung ---
     st.sidebar.subheader("Angebot-Erstellung")
-    if st.sidebar.button("📄 Angebot-PDF anzeigen"):
+    if st.sidebar.button("📄 Angebot-PDF anzeigen", use_container_width=True):
         try:
             pdf_path = build_pdf(
                 product_df=st.session_state["product_df_2"],
@@ -384,14 +432,15 @@ if selected_label != "-- Bitte auswählen --":
                 label="⬇️ Angebot-PDF herunterladen",
                 data=f,
                 file_name=file_name,
-                mime="application/pdf"
+                mime="application/pdf",
+                use_container_width=True
             )
     
     st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
     # --- Auftrag-PDF Erstellung ---
     st.sidebar.subheader("Auftrag-Erstellung")
-    if st.sidebar.button("📄 Auftrag-PDF anzeigen"):
+    if st.sidebar.button("📄 Auftrag-PDF anzeigen", use_container_width=True):
         try:
             payment_details = st.session_state["payment_details"].replace('\n', '<br>')
             pdf_path = build_pdf(
@@ -415,29 +464,29 @@ if selected_label != "-- Bitte auswählen --":
                 label="⬇️ Auftrag-PDF herunterladen",
                 data=f,
                 file_name=file_name,
-                mime="application/pdf"
+                mime="application/pdf",
+                use_container_width=True
             )
     
-
-    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
-
     # --- Excel Download ---
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
     st.sidebar.subheader("Excel")
-    if st.sidebar.button("📊 Excel-Datei erstellen"):
+    if st.sidebar.button("📊 Excel-Datei erstellen", use_container_width=True):
         buffer = generate_excel_file(st.session_state["product_df_2"])
 
         st.sidebar.download_button(
             label="📥 Excel-Datei herunterladen",
             data=buffer,
             file_name=f"excel_liste.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
         )
 
-    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
     # --- Datenbank Speicherung ---
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
     st.sidebar.subheader("Datenbank")
-    if st.sidebar.button("💾 In Datenbank speichern"):
+    if st.sidebar.button("💾 In Datenbank speichern", use_container_width=True):
         # Make all Alternative values False by default
         st.session_state["product_df_2"]['Alternative'] = st.session_state["product_df_2"]['Alternative'].fillna(False).astype(bool)
 
@@ -450,7 +499,7 @@ if selected_label != "-- Bitte auswählen --":
             )
         st.success("✅ Angebot wurde erfolgreich gespeichert.")
 
-    with st.sidebar.popover("❌ Eintrag löschen"):
+    with st.sidebar.popover("❌ Eintrag löschen", use_container_width=True):
             st.markdown("""
                 Die Löschung eines Angebots ist permanent,<br>
                 <b>willst du fortfahren?</b>
@@ -472,5 +521,3 @@ if selected_label != "-- Bitte auswählen --":
                 st.rerun()
 
     st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
-    if st.sidebar.button("Logout"):
-        logout()

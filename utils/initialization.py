@@ -2,60 +2,61 @@ import streamlit as st
 import pandas as pd
 from utils.db import *
 
+# ---DEPRECATED --- DELETED THE FIRST PAGE ---
 # --- Session_state for the first page: Angebot erstellen ---
-def initialize_session_state_angebot_erstellen():
-    """
-    Initializes the session state for the first page: Angebot erstellen.
-    """
-    if "customer_information_1" not in st.session_state:
-        st.session_state["customer_information_1"] = {
-            "Anrede": "Herr",
-            "Vorname": "",
-            "Nachname": "",
-            "Firma": "",
-            "Adresse": "",
-            "PLZ": "",
-            "Ort": "",
-            "Telefonnummer": "",
-            "E_Mail": "",
-            "Angebots_ID": ""
-        }
+# def initialize_session_state_angebot_erstellen():
+#     """
+#     Initializes the session state for the first page: Angebot erstellen.
+#     """
+#     if "customer_information_1" not in st.session_state:
+#         st.session_state["customer_information_1"] = {
+#             "Anrede": "Herr",
+#             "Vorname": "",
+#             "Nachname": "",
+#             "Firma": "",
+#             "Adresse": "",
+#             "PLZ": "",
+#             "Ort": "",
+#             "Telefonnummer": "",
+#             "E_Mail": "",
+#             "Angebots_ID": ""
+#         }
 
-    if "product_df_1" not in st.session_state:
-        st.session_state["product_df_1"] = pd.DataFrame(columns=[
-            'Position', 
-            '2. Position',
-            'Art_Nr', 
-            'Titel', 
-            'Beschreibung', 
-            'Menge',
-            'Preis', 
-            'Gesamtpreis', 
-            'Hersteller', 
-            'Alternative',
-            'Breite',
-            'Tiefe',
-            'Höhe',
-            'Url'
-        ])
+#     if "product_df_1" not in st.session_state:
+#         st.session_state["product_df_1"] = pd.DataFrame(columns=[
+#             'Position', 
+#             '2. Position',
+#             'Art_Nr', 
+#             'Titel', 
+#             'Beschreibung', 
+#             'Menge',
+#             'Preis', 
+#             'Gesamtpreis', 
+#             'Hersteller', 
+#             'Alternative',
+#             'Breite',
+#             'Tiefe',
+#             'Höhe',
+#             'Url'
+#         ])
 
-    if "images_1" not in st.session_state:
-        st.session_state["images_1"] = {}
+#     if "images_1" not in st.session_state:
+#         st.session_state["images_1"] = {}
     
-    if "pdf_preview_1" not in st.session_state:
-        st.session_state["pdf_preview_1"] = ""
+#     if "pdf_preview_1" not in st.session_state:
+#         st.session_state["pdf_preview_1"] = ""
 
-    if "clear_url_input_1" not in st.session_state:
-        st.session_state['clear_url_input_1'] = False
+#     if "clear_url_input_1" not in st.session_state:
+#         st.session_state['clear_url_input_1'] = False
 
-    if st.session_state['clear_url_input_1']:
-        st.session_state['url_input_1'] = ""
-        st.session_state['clear_url_input_1'] = False
+#     if st.session_state['clear_url_input_1']:
+#         st.session_state['url_input_1'] = ""
+#         st.session_state['clear_url_input_1'] = False
 
-    if "all_products_1" not in st.session_state:
-        st.session_state["all_products_1"] = pd.DataFrame(get_all_products())
-        st.session_state["all_products_1"] = st.session_state["all_products_1"][st.session_state["all_products_1"]["Alternative"]]
-        st.session_state["all_products_1"]["label"] = st.session_state["all_products_1"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
+#     if "all_products_1" not in st.session_state:
+#         st.session_state["all_products_1"] = pd.DataFrame(get_all_products())
+#         st.session_state["all_products_1"] = st.session_state["all_products_1"][st.session_state["all_products_1"]["Alternative"]]
+#         st.session_state["all_products_1"]["label"] = st.session_state["all_products_1"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
 
 # --- Session_state for page 2: Angebot suchen ---
 def initialize_session_state_angebot_suchen():
@@ -126,9 +127,11 @@ def initialize_session_state_angebot_suchen():
 
     if "payment_details" not in st.session_state:
         st.session_state["payment_details"] = ""
-    
+
+
+
 # --- Session_state for page 3: Produkt hinzufügen ---
-def initialize_session_state_produkt_hinzufügen():
+# def initialize_session_state_produkt_hinzufügen():
     """
     Initializes the session state for the third page: Produkt hinzufügen.
     """
@@ -170,7 +173,7 @@ def initialize_session_state_produkt_hinzufügen():
             "Preis",
             "Hersteller",
             "Alternative",
-            'Bretie',
+            'Breie',
             'Tiefe',
             'Höhe',
             'Url'

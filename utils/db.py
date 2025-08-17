@@ -1,6 +1,7 @@
 import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
+from google.cloud.firestore import FieldFilter
 from io import BytesIO
 from PIL import Image
 import pandas as pd
@@ -152,14 +153,17 @@ def get_product(article_number):
     Retrieves a specific product document from Firestore based on article number.
 
     Args:
-        art_nr (str): Article number identifying the document.
+        article_number (str): Article number identifying the document.
 
     Returns:
         dict or None: Product data if found; otherwise, None.
     """
-    doc = db.collection("products").where("Art_Nr", "==", article_number).limit(1).get()
+    query = db.collection("products").where(
+        filter=FieldFilter("Art_Nr", "==", article_number)
+    ).limit(1)
 
-    return doc[0].to_dict() if doc else None
+    docs = query.get()
+    return docs[0].to_dict() if docs else None
 
 def get_all_products():
     """

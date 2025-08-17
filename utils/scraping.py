@@ -10,9 +10,7 @@ from utils.db import *
 from utils.initialization import *
 
 # --- Session State Initialization ---
-initialize_session_state_angebot_erstellen()
 initialize_session_state_angebot_suchen()
-initialize_session_state_produkt_hinzufügen()
 
 # ---------------
 # API - Usage ---
@@ -847,4 +845,3 @@ def find_gg_information(url, position, products, images, usage):
         existing_df = st.session_state[key]
         if (not new_df.empty):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
