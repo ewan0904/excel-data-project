@@ -100,6 +100,9 @@ def initialize_session_state_angebot_suchen():
     if "pdf_auftrag" not in st.session_state:
         st.session_state["pdf_auftrag"] = ""
 
+    if "pdf_short" not in st.session_state:
+        st.session_state["pdf_short"] = ""
+
     if "images_2" not in st.session_state:
         st.session_state["images_2"] = {}
     
@@ -126,55 +129,3 @@ def initialize_session_state_angebot_suchen():
 
     if "payment_details" not in st.session_state:
         st.session_state["payment_details"] = ""
-    
-# --- Session_state for page 3: Produkt hinzufügen ---
-def initialize_session_state_produkt_hinzufügen():
-    """
-    Initializes the session state for the third page: Produkt hinzufügen.
-    """
-    if "product_df_3" not in st.session_state:
-        st.session_state["product_df_3"] = pd.DataFrame(columns=[
-            'Art_Nr', 
-            'Titel', 
-            'Beschreibung',
-            'Hersteller',
-            'Preis',
-            'Alternative',
-            'Breite',
-            'Tiefe',
-            'Höhe',
-            'Url'
-        ])
-
-    if "images_3" not in st.session_state:
-        st.session_state["images_3"] = {}
-
-    if "clear_url_input_3" not in st.session_state:
-        st.session_state['clear_url_input_3'] = False
-
-    if st.session_state['clear_url_input_3']:
-        st.session_state['url_input_3'] = ""
-        st.session_state['clear_url_input_3'] = False
-
-    if "all_products_df" not in st.session_state:
-        st.session_state["all_products_df"] = pd.DataFrame(get_all_products())
-
-    if "product_label" not in st.session_state:
-        st.session_state["product_label"] = "-- Bitte auswählen --"
-
-    if "product_in_edit" not in st.session_state:
-        st.session_state["product_in_edit"] = pd.DataFrame(columns=[
-            "Art_Nr",
-            "Titel",
-            "Beschreibung",
-            "Preis",
-            "Hersteller",
-            "Alternative",
-            'Bretie',
-            'Tiefe',
-            'Höhe',
-            'Url'
-        ])
-
-    if "image_in_edit" not in st.session_state:
-        st.session_state["image_in_edit"] = {}

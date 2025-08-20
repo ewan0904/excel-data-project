@@ -13,7 +13,7 @@ import re
 from PIL import Image
 from utils.excel_generator import generate_excel_file
 from concurrent.futures import ThreadPoolExecutor
-from assets.html_structure import get_angebot_template, get_auftrag_template
+from assets.html_structure import get_angebot_template, get_auftrag_template, get_short_angebot_template
 
 # Authentication
 require_login()
@@ -54,6 +54,7 @@ def pdf_preview(file_path):
     )
 
  # Parallel image fetching
+
 def fetch_image(art_nr):
     try:
         image_bytes = get_image(art_nr)
@@ -165,7 +166,7 @@ if selected_label != "-- Bitte auswählen --":
                 st.warning("Bitte fülle alle Informationen aus.")
 
     # --- Produkt-URL Eingabe + Scraping ---  
-    with st.expander("➕📦 **GGM/GH/NC/SG/GG Produkte hinzufügen**"):
+    with st.expander("➕📦 **Produkte hinzufügen**"):
         with st.form("url_form_2"):
             urls = st.text_area("Alle Produkt-Links hier einfügen.", height=150, key="url_input_2")
             submitted = st.form_submit_button("Produkte hinzufügen")
@@ -184,15 +185,17 @@ if selected_label != "-- Bitte auswählen --":
                     idx = start_pos + i - 1
                     try:
                         if "gastro-hero.de" in url:
-                            find_gh_information(url, idx, 2, 2, 1)
+                            find_gh_information(url, idx, 2, 2)
                         elif "ggmgastro.com" in url:
-                            find_ggm_information(url, idx, 2, 2, 1)
+                            find_ggm_information(url, idx, 2, 2)
                         elif "nordcap.de" in url:
-                            find_nc_information(url, idx, 2, 2, 1)
+                            find_nc_information(url, idx, 2, 2)
                         elif "stalgast.de" in url:
-                            find_sg_information(url, idx, 2, 2, 1)
+                            find_sg_information(url, idx, 2, 2)
                         elif "grimm-gastrobedarf.de" in url:
-                            find_gg_information(url, idx, 2, 2, 1)
+                            find_gg_information(url, idx, 2, 2)
+                        elif "gastronomie-moebel.eu" in url:
+                            find_gm_information(url, idx, 2, 2)
                     except Exception as e:
                         failed_urls.append(url)
                         continue
@@ -206,38 +209,6 @@ if selected_label != "-- Bitte auswählen --":
 
                 st.session_state.clear_url_input_2 = True
                 st.rerun()
-
-    # --- Produkt Selection from DB ---
-    with st.expander("➕📦 **Andere Produkte hinzufügen**"):
-        db_product_col1, db_product_col2 = st.columns([5, 3])
-
-        # Multi-Select to select the products from the DB
-        with db_product_col1: 
-            selected_db_products = st.multiselect("Produkte auswählen", st.session_state["all_products_2"]["label"])
-
-        # Button to refresh the products fetched from the DB
-        with db_product_col2:
-            st.button("🔄 Produkte aktualisieren")
-            st.session_state["all_products_2"] = pd.DataFrame(get_all_products())
-            st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
-            st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
-
-        # Button to add products to the editing dataframe
-        if st.button("Produkte hinzufügen", key="save_product_db_2"):
-                    for product_label in selected_db_products:
-                        # Retrieve the product from the DB
-                        doc_id = st.session_state["all_products_2"][st.session_state["all_products_2"]["label"] == product_label]["id"].iloc[0]
-                        db_product = get_product(doc_id)
-                        db_product['Alternative'] = False
-                        #if db_product["Art_Nr"] not in st.session_state["product_df_2"]["Art_Nr"].values:
-
-                        # Add the product to the product_df_2
-                        st.session_state["product_df_2"] = pd.concat([st.session_state["product_df_2"], pd.DataFrame([db_product])], ignore_index=True)
-                        db_image = get_image(db_product['Art_Nr'])
-
-                        if db_image:
-                            image = Image.open(BytesIO(db_image))
-                            st.session_state[f"images_2"][db_product['Art_Nr']] = image
 
     # --- Produkt-Tabelle Bearbeiten ---
     with st.expander("✏️📦 **Produkte bearbeiten**"):
@@ -304,7 +275,7 @@ if selected_label != "-- Bitte auswählen --":
                 st.rerun()
 
     # --- Produktbilder Anzeigen / Hochladen ---
-    with st.expander("✏️📸 **Produktbilder anzeigen / ändern**", expanded=False):
+    with st.expander("✏️📸 **Produktbilder bearbeiten**", expanded=False):
         for i, row in st.session_state["product_df_2"].iterrows():
             art_nr = row.get("Art_Nr")
             st.write("---")
@@ -360,7 +331,7 @@ if selected_label != "-- Bitte auswählen --":
 
     # --- Angebot-PDF Erstellung ---
     st.sidebar.subheader("Angebot-Erstellung")
-    if st.sidebar.button("📄 Angebot-PDF anzeigen"):
+    if st.sidebar.button("📄 Angebot anzeigen"):
         try:
             pdf_path = build_pdf(
                 product_df=st.session_state["product_df_2"],
@@ -381,7 +352,7 @@ if selected_label != "-- Bitte auswählen --":
         file_name = f"angebot_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
         with open(st.session_state["pdf_angebot"], "rb") as f:
             st.sidebar.download_button(
-                label="⬇️ Angebot-PDF herunterladen",
+                label="⬇️ Angebot herunterladen",
                 data=f,
                 file_name=file_name,
                 mime="application/pdf"
@@ -391,7 +362,7 @@ if selected_label != "-- Bitte auswählen --":
 
     # --- Auftrag-PDF Erstellung ---
     st.sidebar.subheader("Auftrag-Erstellung")
-    if st.sidebar.button("📄 Auftrag-PDF anzeigen"):
+    if st.sidebar.button("📄 Auftrag anzeigen"):
         try:
             payment_details = st.session_state["payment_details"].replace('\n', '<br>')
             pdf_path = build_pdf(
@@ -412,13 +383,42 @@ if selected_label != "-- Bitte auswählen --":
         file_name = f"auftrag_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
         with open(st.session_state["pdf_auftrag"], "rb") as f:
             st.sidebar.download_button(
-                label="⬇️ Auftrag-PDF herunterladen",
+                label="⬇️ Auftrag herunterladen",
                 data=f,
                 file_name=file_name,
                 mime="application/pdf"
             )
     
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
+    # --- Kurzes Angebot Erstellung ---
+    st.sidebar.subheader("Kurzes Angebot")
+    if st.sidebar.button("📄 Kurzes Angebot anzeigen"):
+        try:
+            pdf_path = build_pdf(
+                product_df=st.session_state["product_df_2"],
+                customer_df=pd.DataFrame([st.session_state["customer_information_2"]]),
+                custom_images=st.session_state["images_2"],
+                template_type=get_short_angebot_template(),
+                rabatt=st.session_state["rabatt"],
+                payment_details = st.session_state["payment_details"]
+            )
+            st.session_state["pdf_short"] = pdf_path
+            st.success("✅ PDF wurde erfolgreich erstellt.")
+            pdf_preview(pdf_path)
+        except ValueError as e:
+            st.error(f"❌ {e}")
+
+    # --- Kurzes-PDF Download
+    if st.session_state.get("pdf_short"):
+        file_name = f"angebot_kurz_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
+        with open(st.session_state["pdf_short"], "rb") as f:
+            st.sidebar.download_button(
+                label="⬇️ Kurzes Angebot herunterladen",
+                data=f,
+                file_name=file_name,
+                mime="application/pdf"
+            )
     st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
 
     # --- Excel Download ---
