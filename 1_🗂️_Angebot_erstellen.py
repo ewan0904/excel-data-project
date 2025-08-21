@@ -120,6 +120,8 @@ with st.expander("➕📦 **Produkte hinzufügen**"):
                         find_gg_information(url, idx, 1, 1)
                     elif "gastronomie-moebel.eu" in url:
                         find_gm_information(url, idx, 1, 1)
+                    elif "stapelstuhl24.com" in url:
+                        find_s24_information(url, idx, 1, 1)
                 except Exception as e:
                     failed_urls.append(url)
                     continue

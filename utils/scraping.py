@@ -8,6 +8,7 @@ from io import BytesIO
 from PIL import Image
 from utils.db import *
 from utils.initialization import *
+from datetime import date
 
 # --- Session State Initialization ---
 initialize_session_state_angebot_erstellen()
@@ -848,4 +849,101 @@ def find_gm_information(url, position, products, images):
             st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
 
 def find_s24_information(url, position, products, images):
-    return
+    print("Processing:", url, "with position:", position)
+    api_soup = get_soup(url)
+    soup = BeautifulSoup(api_soup, 'html.parser')
+
+    # ---------------- Article ----------------
+    # Create a unique article number: S24-Date-position
+    today = date.today()
+    code = today.strftime("%d%m")
+    article_number = f"S24-{code}-{position}"
+
+    # ---------------- Title ------------------
+    title_h1 = soup.find('h1', {'class': 'productname fading showpost full-visible'})
+    title = title_h1.get_text(strip=True) if title_h1 else ''
+
+    # ---------------- Description-------------
+    description = ""
+    abmessungen = {}
+    keywords = ["Gesamtbreite", "Gesamttiefe", "Gesamthöhe"]
+    legend = soup.find_all('div', {'class': 'legendrow'})
+    if legend:
+        description += f"Produktdetails\n"
+        for row in legend:
+            label = row.find('div', 'legendtext') 
+            value = row.find('div', 'legendvalue')
+            
+            if label and value:
+                label_text = label.get_text(strip=True)
+                value_text = value.get_text(strip=True)
+                if value_text == "" or value_text == "\xa0":
+                    description += f"• {label_text}\n"
+                else:
+                    description += f"• {label_text}: {value_text}\n"
+
+                if any(keyword in label_text for keyword in keywords):
+                    value_text = value_text.replace("cm", "").strip()
+                    value_text = int(value_text) * 10
+                    abmessungen[label_text] = value_text
+        description = description.strip()
+
+    # ---------------- Price ------------------
+    price = None
+    price_span = soup.find('span', {'id': 'price', 'itemprop': 'price'}) 
+    if price_span:
+        price_raw = price_span.get_text(strip=True).replace(",", ".")
+        price = float(price_raw)
+
+    # ---------------- Hersteller -------------
+    hersteller = 'S24 Möbel'
+
+    # ---------------- Create row -------------
+    new_row = {
+        'Position': position,
+        '2. Position': '',
+        'Art_Nr': article_number,
+        'Titel': title,
+        'Beschreibung': description,
+        'Menge': 1,
+        'Preis': price,
+        'Gesamtpreis': price,
+        'Hersteller': hersteller,
+        'Alternative': False,
+        'Breite': abmessungen.get('Gesamtbreite') if abmessungen.get('Gesamtbreite') else None,
+        'Tiefe': abmessungen.get('Gesamttiefe') if abmessungen.get('Gesamttiefe') else None,
+        'Höhe': abmessungen.get('Gesamthöhe') if abmessungen.get('Gesamthöhe') else None,
+        'Url': url
+    }
+
+    # ---------------- Image ------------------
+    image_url = ""
+    image_div = soup.find('div', {'id': 'produktabbildung'})
+    if image_div:
+        image_src = image_div.find('img')
+        if image_src:
+            image_url_raw = image_src.get('src')
+            image_url = f"https://www.stapelstuhl24.com/{image_url_raw}"
+
+    # ---------------- Auto-crop --------------
+    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
+        db_image = get_image(new_row['Art_Nr'])
+        if db_image:
+            image = Image.open(BytesIO(db_image))
+            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+        else:
+            image = auto_crop_image_with_rembg(image_url)
+            if image:
+                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+
+    # # ---------------- Save row ---------------
+    new_df = pd.DataFrame([new_row])
+    key = f"product_df_{products}"
+
+    if st.session_state.get(key) is None or st.session_state[key].empty:
+        st.session_state[key] = new_df.copy()
+
+    else:
+        existing_df = st.session_state[key]
+        if (not new_df.empty):
+            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)

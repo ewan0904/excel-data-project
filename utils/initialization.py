@@ -52,10 +52,10 @@ def initialize_session_state_angebot_erstellen():
         st.session_state['url_input_1'] = ""
         st.session_state['clear_url_input_1'] = False
 
-    if "all_products_1" not in st.session_state:
-        st.session_state["all_products_1"] = pd.DataFrame(get_all_products())
-        st.session_state["all_products_1"] = st.session_state["all_products_1"][st.session_state["all_products_1"]["Alternative"]]
-        st.session_state["all_products_1"]["label"] = st.session_state["all_products_1"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
+    # if "all_products_1" not in st.session_state:
+    #     st.session_state["all_products_1"] = pd.DataFrame(get_all_products())
+    #     st.session_state["all_products_1"] = st.session_state["all_products_1"][st.session_state["all_products_1"]["Alternative"]]
+    #     st.session_state["all_products_1"]["label"] = st.session_state["all_products_1"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
 
 # --- Session_state for page 2: Angebot suchen ---
 def initialize_session_state_angebot_suchen():
@@ -119,10 +119,10 @@ def initialize_session_state_angebot_suchen():
         st.session_state['url_input_2'] = ""
         st.session_state['clear_url_input_2'] = False
 
-    if "all_products_2" not in st.session_state:
-        st.session_state["all_products_2"] = pd.DataFrame(get_all_products())
-        st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
-        st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
+    # if "all_products_2" not in st.session_state:
+    #     st.session_state["all_products_2"] = pd.DataFrame(get_all_products())
+    #     st.session_state["all_products_2"] = st.session_state["all_products_2"][st.session_state["all_products_2"]["Alternative"]]
+    #     st.session_state["all_products_2"]["label"] = st.session_state["all_products_2"].apply(lambda row: f"{row['Art_Nr']} | {row['Titel']} | {row['Hersteller']}", axis=1)
 
     if "rabatt" not in st.session_state:
         st.session_state["rabatt"] = 0

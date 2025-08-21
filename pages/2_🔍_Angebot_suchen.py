@@ -196,6 +196,8 @@ if selected_label != "-- Bitte auswählen --":
                             find_gg_information(url, idx, 2, 2)
                         elif "gastronomie-moebel.eu" in url:
                             find_gm_information(url, idx, 2, 2)
+                        elif "stapelstuhl24.com" in url:
+                            find_s24_information(url, idx, 2, 2)
                     except Exception as e:
                         failed_urls.append(url)
                         continue
