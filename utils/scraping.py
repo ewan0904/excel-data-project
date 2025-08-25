@@ -40,6 +40,49 @@ def get_soup(url):
 # ------------------------
 # --- Helper functions ---
 # ------------------------
+def process_url(url, idx):
+    try:
+        row, image_url = "", ""
+        if "gastro-hero.de" in url:
+            row, image_url = find_gh_information(url, idx)
+        elif "ggmgastro.com" in url:
+            row, image_url = find_ggm_information(url, idx)
+        elif "nordcap.de" in url:
+            row, image_url = find_nc_information(url, idx)
+        elif "stalgast.de" in url:
+            row, image_url = find_sg_information(url, idx)
+        elif "grimm-gastrobedarf.de" in url:
+            row, image_url = find_gg_information(url, idx)
+        elif "gastronomie-moebel.eu" in url:
+            row, image_url = find_gm_information(url, idx)
+        elif "stapelstuhl24.com" in url:
+            row, image_url = find_s24_information(url, idx)
+        elif "intergastro.de" in url:
+            row, image_url = find_ig_information(url, idx)
+        return {"ok": True, "row": row, "image_url": image_url}
+    except Exception as e:
+        return {"ok": False, "idx": idx, "err": str(e), "url": url}
+
+def process_image(art_nr, image_url):
+    """
+    Runs in a background thread: tries DB first, then cropping.
+    Returns (art_nr, PIL.Image or None).
+    """
+    # 1) DB first
+    db_image = get_image(art_nr)
+    if db_image:
+        try:
+            return art_nr, Image.open(BytesIO(db_image))
+        except Exception:
+            pass
+
+    # 2) Crop from remote
+    try:
+        img = auto_crop_image_with_rembg(image_url)
+        return art_nr, img
+    except Exception:
+        return art_nr, None
+
 def auto_crop_image_with_rembg(image_url):
     """
     Downloads an image and removes its background using the rembg library.
@@ -93,7 +136,7 @@ def extract_urls(text):
 # ----------------------------------
 # ------------ SCRAPING ------------
 # ----------------------------------
-def find_ggm_information(url, position, products, images):
+def find_ggm_information(url, position):
     """
     Scrapes product information from a GGM website and stores it in session state.
 
@@ -189,30 +232,9 @@ def find_ggm_information(url, position, products, images):
     image_tag = soup.find('div', {"class": "object-cover lg:cursor-zoom-in"}).find('img', src=lambda x: x and 'ggm.bynder.com' in x)
     image_url = image_tag.get('src') if image_tag else ''
 
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_gh_information(url, position, products, images):
+def find_gh_information(url, position):
     """
     Scrapes product information from a GastroHero product page and stores it in session state.
 
@@ -333,30 +355,9 @@ def find_gh_information(url, position, products, images):
     image_tag = soup.find('div', {"class": "preview"}).find('img', src=lambda x: x and 'api.gastro-hero.de' in x)
     image_url = image_tag.get('src') if image_tag else ''
     
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_nc_information(url, position, products, images):
+def find_nc_information(url, position):
     """
     Scrapes product information from a NordCap product page and stores it in session state.
 
@@ -458,30 +459,9 @@ def find_nc_information(url, position, products, images):
         'Url': url
     }
 
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_sg_information(url, position, products, images):
+def find_sg_information(url, position):
     api_soup = get_soup(url)
     soup = BeautifulSoup(api_soup, 'html.parser')
 
@@ -564,30 +544,9 @@ def find_sg_information(url, position, products, images):
         'Url': url
     }
 
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_gg_information(url, position, products, images):
+def find_gg_information(url, position):
     api_soup = get_soup(url)
     soup = BeautifulSoup(api_soup, 'html.parser')
 
@@ -694,30 +653,9 @@ def find_gg_information(url, position, products, images):
         'Url': url
     }
 
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_gm_information(url, position, products, images):
+def find_gm_information(url, position):
     api_soup = get_soup(url)
     soup = BeautifulSoup(api_soup, 'html.parser')
 
@@ -825,31 +763,9 @@ def find_gm_information(url, position, products, images):
         'Url': url
     }
 
-    # ---------------- Auto-Crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
-
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
-
-    else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
-
-def find_s24_information(url, position, products, images):
-    print("Processing:", url, "with position:", position)
+def find_s24_information(url, position):
     api_soup = get_soup(url)
     soup = BeautifulSoup(api_soup, 'html.parser')
 
@@ -925,25 +841,108 @@ def find_s24_information(url, position, products, images):
             image_url_raw = image_src.get('src')
             image_url = f"https://www.stapelstuhl24.com/{image_url_raw}"
 
-    # ---------------- Auto-crop --------------
-    if new_row['Art_Nr'] not in st.session_state.get(f"images_{images}", {}):
-        db_image = get_image(new_row['Art_Nr'])
-        if db_image:
-            image = Image.open(BytesIO(db_image))
-            st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
-        else:
-            image = auto_crop_image_with_rembg(image_url)
-            if image:
-                st.session_state[f"images_{images}"][new_row['Art_Nr']] = image
+    return new_row, image_url
 
-    # # ---------------- Save row ---------------
-    new_df = pd.DataFrame([new_row])
-    key = f"product_df_{products}"
+def find_ig_information(url, position):
+    api_soup = get_soup(url)
+    soup = BeautifulSoup(api_soup, 'html.parser')
 
-    if st.session_state.get(key) is None or st.session_state[key].empty:
-        st.session_state[key] = new_df.copy()
+    # ---------------- Hersteller -------------
+    hersteller = "IG"
+
+    # ---------------- Article ----------------
+    article_number = ""
+    hersteller_a = soup.find('a', {'id': 'brandLink'})
+    if hersteller_a:
+        hersteller = hersteller_a.get_text(strip=True)
 
     else:
-        existing_df = st.session_state[key]
-        if (not new_df.empty):
-            st.session_state[key] = pd.concat([existing_df, new_df], ignore_index=True)
+        article_div = soup.find('div', {'class': 'product-info'})
+        if article_div:
+            product_div = article_div.find('div', {'class': 'product-number'})
+            if product_div:
+                product_span = product_div.find('span', {'itemprop': 'sku'})
+                if product_span:
+                    article_number = product_span.get_text(strip=True)
+
+    # ---------------- Title ------------------
+    title = ""
+    title_h1 = soup.find('h1', {'class': 'product-name'})
+    if title_h1:
+        title_span = title_h1.find('span', {'itemprop': 'name'})
+        if title_span:
+            title = title_span.get_text(strip=True)
+
+    # ---------------- Description-------------
+    description = ""
+    abmessungen = {}
+    produktdetails_div = soup.find('div', {'id': 'ShortDescription'})
+    if produktdetails_div:
+        for dt in produktdetails_div.find_all('dt'):
+            ul = dt.find_next_sibling('ul')
+            stored_text = ""
+            if ul:
+                for li in ul.find_all('li'):
+                    item_text = li.get_text()
+                    if item_text:
+                        text = re.sub(r"\s+", " ", item_text).replace("\xa0", " ").strip()
+                        stored_text += f"• {text}\n"
+                    if "Hersteller-Art.-Nr" in item_text:
+                        text = re.sub(r"\s+", " ", item_text).replace("\xa0", " ").strip()
+                        article_number = text.split(":")[1].strip()
+
+                    if "Abmessungen" in dt.get_text():
+                        if "Tiefe" in item_text:
+                            abmessungen["Tiefe"] = item_text.split(":")[1].replace("mm", "").strip()
+
+                        if "Breite" in item_text:
+                            abmessungen["Breite"] = item_text.split(":")[1].replace("mm", "").strip()
+
+                        if "Höhe" in item_text:
+                            abmessungen["Höhe"] = item_text.split(":")[1].replace("mm", "").strip()
+                
+                if stored_text != "":
+                    description += f"{dt.get_text(strip=True)}\n{stored_text}\n"
+        
+        description = description.strip()
+
+    # ---------------- Price ------------------
+    price = None
+    price_div = soup.find('div', {'class': 'product-info'})
+    if price_div:
+        price_container = price_div.find('div', {'class': 'price-container'})
+        if price_container:
+            current_price_div = price_container.find('div', {'class': 'current-price'})
+            if current_price_div:
+                price_raw = current_price_div.find(string=True, recursive=False).strip()
+                if price_raw:
+                    price_raw = price_raw.replace(".", "").replace(",", ".").replace("€", "").strip()
+                    price = float(price_raw)
+
+    # ---------------- Create row -------------
+    new_row = {
+        'Position': position,
+        '2. Position': '',
+        'Art_Nr': article_number,
+        'Titel': title,
+        'Beschreibung': description,
+        'Menge': 1,
+        'Preis': price,
+        'Gesamtpreis': price,
+        'Hersteller': hersteller,
+        'Alternative': False,
+        'Breite': abmessungen.get('Breite') if abmessungen.get('Breite') else None,
+        'Tiefe': abmessungen.get('Tiefe') if abmessungen.get('Tiefe') else None,
+        'Höhe': abmessungen.get('Höhe') if abmessungen.get('Höhe') else None,
+        'Url': url
+    }
+
+    # ---------------- Image ------------------
+    image_url = ""
+    image_div = soup.find('div', {'class': 'product-image-container'})
+    if image_div:
+        image_img = image_div.find('img')
+        if image_img:
+            image_url = f"https://www.intergastro.de{image_img.get('src')}"
+
+    return new_row, image_url

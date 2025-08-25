@@ -11,6 +11,7 @@ from utils.auth import *
 from utils.db import *
 from utils.initialization import initialize_session_state_angebot_erstellen
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- Authentication ---
 require_login()
@@ -98,40 +99,61 @@ with st.expander("➕📦 **Produkte hinzufügen**"):
     if submitted:
         extracted_urls = extract_urls(urls)
         if extracted_urls:
+            if "product_df_1" not in st.session_state:
+                st.session_state["product_df_1"] = pd.DataFrame()
+
             start_pos = len(st.session_state["product_df_1"]) + 1
-
-            progress_text = f"🔄 0 / {len(extracted_urls)} Produkte wurden verarbeitet..."
-            my_bar = st.progress(0, text=progress_text)
-
             total = len(extracted_urls)
-            failed_urls = []
-            for i, url in enumerate(extracted_urls, start=1):
-                idx = start_pos + i - 1
-                try:
-                    if "gastro-hero.de" in url:
-                        find_gh_information(url, idx, 1, 1)
-                    elif "ggmgastro.com" in url:
-                        find_ggm_information(url, idx, 1, 1)
-                    elif "nordcap.de" in url:
-                        find_nc_information(url, idx, 1, 1)
-                    elif "stalgast.de" in url:
-                        find_sg_information(url, idx, 1, 1)
-                    elif "grimm-gastrobedarf.de" in url:
-                        find_gg_information(url, idx, 1, 1)
-                    elif "gastronomie-moebel.eu" in url:
-                        find_gm_information(url, idx, 1, 1)
-                    elif "stapelstuhl24.com" in url:
-                        find_s24_information(url, idx, 1, 1)
-                except Exception as e:
-                    failed_urls.append(url)
-                    continue
+            product_bar = st.progress(0, text=f"🔄 0 / {total} Produkte wurden verarbeitet...")
 
-                # Update progress
-                progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
-                my_bar.progress(int(i / total * 100), text=progress_text)
+            futures = []
+            with ThreadPoolExecutor(max_workers=10) as ex:
+                for i, url in enumerate(extracted_urls, start=1):
+                    idx = start_pos + i - 1
+                    futures.append(ex.submit(process_url, url, idx))  # df_id = 1
+                
+                results, failed = [], []
+                for done, fut in enumerate(as_completed(futures), start=1):
+                    res = fut.result()
+                    results.append(res)
+                    if not res["ok"]:
+                        failed.append((res["url"], res.get("err")))
+                    product_bar.progress(int(done / total * 100),
+                                 text=f"🔄 {done} / {total} Produkte wurden verarbeitet...")
 
-            time.sleep(0.3)
-            my_bar.empty()
+            time.sleep(0.2)
+            product_bar.empty()
+
+            # write rows in order of idx
+            rows = [r for r in results if r["ok"] and r["row"] is not None]
+            if rows:
+                new_df = pd.DataFrame([r["row"] for r in rows])
+                st.session_state["product_df_1"] = (
+                    pd.concat([st.session_state["product_df_1"], new_df])
+                    .sort_values("Position").reset_index(drop=True)
+                )
+            
+            # Image processing
+            todo = [
+                    (r["row"].get("Art_Nr"), r["image_url"])
+                    for r in results
+                    if r["ok"] and r["row"] and r["image_url"]
+                    and r["row"].get("Art_Nr") not in st.session_state["images_1"]
+                ]
+            image_bar = st.progress(0, text=f"🔄 0 / {total} Bilder wurden verarbeitet...")
+            with ThreadPoolExecutor(max_workers=10) as ex:
+                futures = [ex.submit(process_image, art, url) for art, url in todo]
+
+                for done, fut in enumerate(as_completed(futures), start=1):
+                    art_nr, img = fut.result()
+                    if img is not None:
+                        # ✅ safe: update session only in main thread
+                        st.session_state["images_1"][art_nr] = img
+                    image_bar.progress(int(done / total * 100), text=f"🔄 {done} / {total} Produkte wurden verarbeitet...")
+
+
+            if failed:
+                st.warning("Einige Links konnten nicht verarbeitet werden:")
 
             st.session_state.clear_url_input_1 = True
             st.rerun()
@@ -187,9 +209,19 @@ with st.expander("✏️📦 **Produkte bearbeiten**"):
                 art_nr = row.get("Art_Nr")
 
                 if art_nr not in st.session_state['images_1']:
-                    st.session_state['images_1'][art_nr] = Image.open("assets/logo.png")
-
+                    db_image = get_image(art_nr)
+                    if db_image:
+                        try:
+                            st.session_state['images_1'][art_nr] = Image.open(BytesIO(db_image))
+                        except Exception:
+                            st.session_state['images_1'][art_nr] = Image.open("assets/logo.png")
+                            
             st.session_state["product_df_1"] = edited_df
+            # Delete the images that are not being used anymore
+            valid_artnrs = set(st.session_state["product_df_1"]["Art_Nr"])
+            for image in list(st.session_state['images_1'].keys()):
+                if image not in valid_artnrs:
+                    del st.session_state['images_1'][image]
             st.rerun()
 
     with col2:

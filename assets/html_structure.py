@@ -401,10 +401,20 @@ def get_angebot_template():
     </div>
     {% endif %}
 
+    {% if if_mwst == True %}
     <div class="row">
         <div>19% MwSt:</div>
         <div>{{ mwst | german_currency }} €</div>
     </div>
+    {% endif %}
+
+    {% if if_mwst == False %}
+    <div class="row">
+        <div>ATU-Nummer:</div>
+        <div>{{atu}}</div>
+    </div>
+    {% endif %}
+
     <div class="row total">
         <div>Brutto Gesamt:</div>
         <div>{{ brutto | german_currency }} €</div>
@@ -1081,10 +1091,18 @@ def get_auftrag_template():
     </div>
     {% endif %}
 
+    {% if if_mwst == True %}
     <div class="row">
         <div>19% MwSt:</div>
         <div>{{ mwst | german_currency }} €</div>
     </div>
+    {% endif %}
+    {% if if_mwst == False %}
+    <div class="row">
+        <div>ATU-Nummer:</div>
+        <div>{{atu}}</div>
+    </div>
+    {% endif %}
     <div class="row total">
         <div>Brutto Gesamt:</div>
         <div>{{ brutto | german_currency }} €</div>
@@ -1761,10 +1779,20 @@ def get_short_angebot_template():
     </div>
     {% endif %}
 
+    {% if if_mwst == True %}
     <div class="row">
         <div>19% MwSt:</div>
         <div>{{ mwst | german_currency }} €</div>
     </div>
+    {% endif %}
+    
+    {% if if_mwst == False %}
+    <div class="row">
+        <div>ATU-Nummer:</div>
+        <div>{{atu}}</div>
+    </div>
+    {% endif %}
+
     <div class="row total">
         <div>Brutto Gesamt:</div>
         <div>{{ brutto | german_currency }} €</div>

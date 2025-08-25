@@ -129,3 +129,9 @@ def initialize_session_state_angebot_suchen():
 
     if "payment_details" not in st.session_state:
         st.session_state["payment_details"] = ""
+    
+    if "mwst" not in st.session_state:
+        st.session_state["mwst"] = True
+    
+    if "atu" not in st.session_state:
+        st.session_state["atu"] = ""

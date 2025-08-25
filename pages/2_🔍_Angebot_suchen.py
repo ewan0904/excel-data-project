@@ -12,7 +12,7 @@ from streamlit_pdf_viewer import pdf_viewer
 import re
 from PIL import Image
 from utils.excel_generator import generate_excel_file
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from assets.html_structure import get_angebot_template, get_auftrag_template, get_short_angebot_template
 
 # Authentication
@@ -41,7 +41,9 @@ def reset():
         "product_df_2": st.session_state["product_df_2"].iloc[0:0],
         "images_2": {},
         "rabatt": 0,
-        "payment_details": ""
+        "payment_details": "",
+        "mwst": True,
+        "atu": ""
         })
 
 def pdf_preview(file_path):
@@ -117,6 +119,8 @@ if selected_label != "-- Bitte auswählen --":
         st.session_state["rabatt"] = payment_info.get("rabatt", 0)
         st.session_state["bei_auftrag"] = payment_info.get("bei_auftrag", "")
         st.session_state["bei_lieferung"] = payment_info.get("bei_lieferung", "")
+        st.session_state["mwst"] = payment_info.get("mwst", True)
+        st.session_state["atu"] = payment_info.get("atu", "")
 
         # Fetch images and store them in session_state
         art_nrs = st.session_state["product_df_2"]["Art_Nr"].tolist()
@@ -174,40 +178,61 @@ if selected_label != "-- Bitte auswählen --":
         if submitted:
             extracted_urls = extract_urls(urls)
             if extracted_urls:
+                if "product_df_2" not in st.session_state:
+                    st.session_state["product_df_2"] = pd.DataFrame()
+
                 start_pos = len(st.session_state["product_df_2"]) + 1
-
-                progress_text = f"🔄 0 / {len(extracted_urls)} Produkte wurden verarbeitet..."
-                my_bar = st.progress(0, text=progress_text)
-
                 total = len(extracted_urls)
-                failed_urls = []
-                for i, url in enumerate(extracted_urls, start=1):
-                    idx = start_pos + i - 1
-                    try:
-                        if "gastro-hero.de" in url:
-                            find_gh_information(url, idx, 2, 2)
-                        elif "ggmgastro.com" in url:
-                            find_ggm_information(url, idx, 2, 2)
-                        elif "nordcap.de" in url:
-                            find_nc_information(url, idx, 2, 2)
-                        elif "stalgast.de" in url:
-                            find_sg_information(url, idx, 2, 2)
-                        elif "grimm-gastrobedarf.de" in url:
-                            find_gg_information(url, idx, 2, 2)
-                        elif "gastronomie-moebel.eu" in url:
-                            find_gm_information(url, idx, 2, 2)
-                        elif "stapelstuhl24.com" in url:
-                            find_s24_information(url, idx, 2, 2)
-                    except Exception as e:
-                        failed_urls.append(url)
-                        continue
+                product_bar = st.progress(0, text=f"🔄 0 / {total} Produkte wurden verarbeitet...")
 
-                    # Update progress
-                    progress_text = f"🔄 {i} / {len(extracted_urls)} Produkte wurden verarbeitet..."
-                    my_bar.progress(int(i / total * 100), text=progress_text)
+                futures = []
+                with ThreadPoolExecutor(max_workers=10) as ex:
+                    for i, url in enumerate(extracted_urls, start=1):
+                        idx = start_pos + i - 1
+                        futures.append(ex.submit(process_url, url, idx))  # df_id = 1
+                    
+                    results, failed = [], []
+                    for done, fut in enumerate(as_completed(futures), start=1):
+                        res = fut.result()
+                        results.append(res)
+                        if not res["ok"]:
+                            failed.append((res["url"], res.get("err")))
+                        product_bar.progress(int(done / total * 100),
+                                    text=f"🔄 {done} / {total} Produkte wurden verarbeitet...")
 
-                time.sleep(0.3)
-                my_bar.empty()
+                time.sleep(0.2)
+                product_bar.empty()
+
+                # write rows in order of idx
+                rows = [r for r in results if r["ok"] and r["row"] is not None]
+                if rows:
+                    new_df = pd.DataFrame([r["row"] for r in rows])
+                    st.session_state["product_df_2"] = (
+                        pd.concat([st.session_state["product_df_2"], new_df])
+                        .sort_values("Position").reset_index(drop=True)
+                    )
+                
+                # Image processing
+                todo = [
+                        (r["row"].get("Art_Nr"), r["image_url"])
+                        for r in results
+                        if r["ok"] and r["row"] and r["image_url"]
+                        and r["row"].get("Art_Nr") not in st.session_state["images_2"]
+                    ]
+                image_bar = st.progress(0, text=f"🔄 0 / {total} Bilder wurden verarbeitet...")
+                with ThreadPoolExecutor(max_workers=10) as ex:
+                    futures = [ex.submit(process_image, art, url) for art, url in todo]
+
+                    for done, fut in enumerate(as_completed(futures), start=1):
+                        art_nr, img = fut.result()
+                        if img is not None:
+                            # ✅ safe: update session only in main thread
+                            st.session_state["images_2"][art_nr] = img
+                        image_bar.progress(int(done / total * 100), text=f"🔄 {done} / {total} Produkte wurden verarbeitet...")
+
+
+                if failed:
+                    st.warning("Einige Links konnten nicht verarbeitet werden:")
 
                 st.session_state.clear_url_input_2 = True
                 st.rerun()
@@ -262,10 +287,21 @@ if selected_label != "-- Bitte auswählen --":
                 for i, row in edited_df.iterrows():
                     art_nr = row.get("Art_Nr")
 
-                    if art_nr not in st.session_state['images_2']:
-                        st.session_state['images_2'][art_nr] = Image.open("assets/logo.png")
+                    if art_nr not in st.session_state['images_1']:
+                        db_image = get_image(art_nr)
+                        if db_image:
+                            try:
+                                st.session_state['images_1'][art_nr] = Image.open(BytesIO(db_image))
+                            except Exception:
+                                st.session_state['images_1'][art_nr] = Image.open("assets/logo.png")
 
                 st.session_state["product_df_2"] = edited_df
+
+                # Delete the images that are not being used anymore
+                valid_artnrs = set(st.session_state["product_df_2"]["Art_Nr"])
+                for image in list(st.session_state['images_2'].keys()):
+                    if image not in valid_artnrs:
+                        del st.session_state['images_2'][image]
                 st.rerun()
 
         with col2:
@@ -316,12 +352,16 @@ if selected_label != "-- Bitte auswählen --":
     with st.expander("🏷️ **Zahlungs-Einstellungen**"):
         with st.form("Zahlungen speichern"):
             rabatt = st.number_input("Rabatt (z.B. 10 für 10%)", value=float(st.session_state["rabatt"]), step=0.1, format="%0.1f")
+            mwst_included = st.checkbox("Mwst. mit berechnen?", value=st.session_state["mwst"])
+            atu_nummer = st.text_input("ATU-Nummer", value=st.session_state["atu"])
             payment_details = st.text_area("Wie viel bei Lieferung und Zahlung? (Falls nichts angegeben, steht bei den Zahlungsbedingungen: Vorkasse)", value=st.session_state["payment_details"])
             zahlungs_button = st.form_submit_button("Zahlungen-Einstellungen speichern")
 
             if zahlungs_button:
                 st.session_state["rabatt"] = rabatt
                 st.session_state["payment_details"] = payment_details
+                st.session_state["mwst"] = mwst_included
+                st.session_state["atu"] = atu_nummer
             
                 with st.spinner():
                     st.success("Zahlungs-Einstellungen gespeichert!")
@@ -341,7 +381,9 @@ if selected_label != "-- Bitte auswählen --":
                 custom_images=st.session_state["images_2"],
                 template_type=get_angebot_template(),
                 rabatt=st.session_state["rabatt"],
-                payment_details = st.session_state["payment_details"]
+                payment_details = st.session_state["payment_details"],
+                if_mwst=st.session_state["mwst"],
+                atu=st.session_state["atu"]
             )
             st.session_state["pdf_angebot"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
@@ -373,7 +415,9 @@ if selected_label != "-- Bitte auswählen --":
                 custom_images=st.session_state["images_2"],
                 template_type=get_auftrag_template(),
                 rabatt=st.session_state["rabatt"],
-                payment_details=payment_details
+                payment_details=payment_details,
+                if_mwst=st.session_state["mwst"],
+                atu=st.session_state["atu"]
             )
             st.session_state["pdf_auftrag"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
@@ -403,7 +447,9 @@ if selected_label != "-- Bitte auswählen --":
                 custom_images=st.session_state["images_2"],
                 template_type=get_short_angebot_template(),
                 rabatt=st.session_state["rabatt"],
-                payment_details = st.session_state["payment_details"]
+                payment_details = st.session_state["payment_details"],
+                if_mwst=st.session_state["mwst"],
+                atu=st.session_state["atu"]
             )
             st.session_state["pdf_short"] = pdf_path
             st.success("✅ PDF wurde erfolgreich erstellt.")
@@ -448,7 +494,7 @@ if selected_label != "-- Bitte auswählen --":
             products=st.session_state["product_df_2"],
             images=st.session_state["images_2"],
             angebots_id=selected_invoice_row.iloc[0]['invoice_id'],
-            customer_id=selected_invoice_row.iloc[0]["customer_id"]
+            customer_id=selected_invoice_row.iloc[0]["customer_id"],
             )
         st.success("✅ Angebot wurde erfolgreich gespeichert.")
 

@@ -67,7 +67,7 @@ def encode_logo_as_base64_png(path="assets/logo.png"):
 # -----------------
 # --- Build PDF ---
 # ----------------- 
-def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, payment_details):
+def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, payment_details, if_mwst, atu):
     """
     Builds a PDF document from product and customer data using an HTML template.
 
@@ -140,7 +140,7 @@ def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, pay
     filtered_df = df_render[~df_render["Alternative"]]  # exclude alternatives
     netto = filtered_df["Gesamtpreis"].sum()
     rabatt_num = (netto * rabatt) / 100
-    mwst = netto * 0.19
+    mwst = netto * 0.19 if if_mwst else 0
     brutto = netto - rabatt_num + mwst
     customer = customer_df.drop(columns=["Angebots_ID"])
     env = Environment(loader=BaseLoader())
@@ -158,7 +158,9 @@ def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, pay
         rabatt_num=rabatt_num,
         payment_details=payment_details,
         logo_base64=encode_logo_as_base64_png(),
-        aktuelles_datum=datetime.today().strftime("%d.%m.%y")
+        aktuelles_datum=datetime.today().strftime("%d.%m.%y"),
+        if_mwst=if_mwst,
+        atu=atu
     )
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf", dir="/tmp") as tmp_file:

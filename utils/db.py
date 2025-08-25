@@ -203,57 +203,6 @@ def get_image(art_nr: str) -> bytes | None:
 # ----------------------
 # --- POST Firestore ---
 # ----------------------
-# def post_image(products, images, max_threads=20):
-#     """
-#     Uploads images to Firebase Storage for each product in the given DataFrame.
-
-#     Args:
-#         products (pd.DataFrame): DataFrame of products.
-#         images (dict): Dictionary of images keyed by article number.
-#     """
-#     bucket = storage.bucket()
-
-#     for _, product in products.iterrows():
-#         art_nr = product['Art_Nr']
-#         image_data = images.get(art_nr)
-
-#         if image_data is None:
-#             st.warning(f"⚠️ Kein Bild für {art_nr} gefunden.")
-#             continue
-
-#         blob = bucket.blob(f"product_images/{art_nr}.jpg")
-
-#         # 1. UploadedFile
-#         if isinstance(image_data, st.runtime.uploaded_file_manager.UploadedFile) or hasattr(image_data, "read"):
-#             image_data.seek(0)
-#             try:
-#                 pil_image = Image.open(image_data)
-#                 buffer = to_jpeg_rgb(pil_image)
-#                 blob.upload_from_file(buffer, content_type='image/jpeg')
-#             except Exception as e:
-#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (UploadedFile): {e}")
-
-#         # 2. PIL Image
-#         elif isinstance(image_data, Image.Image):
-#             try:
-#                 buffer = to_jpeg_rgb(image_data)
-#                 blob.upload_from_file(buffer, content_type="image/jpeg")
-#             except Exception as e:
-#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (PIL.Image): {e}")
-
-#         # 3. BytesIO
-#         elif isinstance(image_data, BytesIO):
-#             try:
-#                 image_data.seek(0)
-#                 pil_image = Image.open(image_data)
-#                 buffer = to_jpeg_rgb(pil_image)
-#                 blob.upload_from_file(buffer, content_type="image/jpeg")
-#             except Exception as e:
-#                 st.error(f"❌ Fehler beim Verarbeiten von {art_nr} (BytesIO): {e}")
-
-#         else:
-#             st.warning(f"❌ {art_nr}: Bildtyp nicht unterstützt ({type(image_data)}).")
-
 def post_image(products, images, max_threads=20):
     """
     Uploads images to Firebase Storage for each product in the given DataFrame using threading.
@@ -323,6 +272,8 @@ def post_offer(customer, products, images):
         "Kunden_ID": customer_doc_id,
         "rabatt": 0,
         "payment_details": "",
+        "mwst": True,
+        "atu": "",
         "created_at": firestore.SERVER_TIMESTAMP
     }
     _, angebot_doc_ref = db.collection("invoices").add(angebot_Kunden_ID)
@@ -394,6 +345,8 @@ def put_offer(customer, products, images, angebots_id, customer_id):
     db.collection("invoices").document(angebots_id).update({
         "rabatt": st.session_state["rabatt"],
         "payment_details": st.session_state["payment_details"],
+        "mwst": st.session_state["mwst"],
+        "atu": st.session_state["atu"]
     })
 
     # Delete existing products subcollection
