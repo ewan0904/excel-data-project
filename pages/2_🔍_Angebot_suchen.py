@@ -287,13 +287,13 @@ if selected_label != "-- Bitte auswählen --":
                 for i, row in edited_df.iterrows():
                     art_nr = row.get("Art_Nr")
 
-                    if art_nr not in st.session_state['images_1']:
+                    if art_nr not in st.session_state['images_2']:
                         db_image = get_image(art_nr)
                         if db_image:
                             try:
-                                st.session_state['images_1'][art_nr] = Image.open(BytesIO(db_image))
+                                st.session_state['images_2'][art_nr] = Image.open(BytesIO(db_image))
                             except Exception:
-                                st.session_state['images_1'][art_nr] = Image.open("assets/logo.png")
+                                st.session_state['images_2'][art_nr] = Image.open("assets/logo.png")
 
                 st.session_state["product_df_2"] = edited_df
 
