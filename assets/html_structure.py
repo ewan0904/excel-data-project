@@ -1377,6 +1377,7 @@ def get_auftrag_template():
     return template
 
 def get_short_angebot_template():
+    
     template = """<!DOCTYPE html>
     <html lang="de">
     <head>
@@ -1727,40 +1728,43 @@ def get_short_angebot_template():
     </thead>
     <tbody>
     {% for row in products %}
-        {% if not row['Alternative'] %}
-        <tr class="product-row{% if loop.index > 1 %} no-split{% endif %}">
-            <td><strong>{{ row['Positionsbezeichnung'] }}</strong></td>
-            <td>
-                {% if row['image'] %}
-                    <img src="{{ row['image'] }}" class="product-img">
-                {% endif %}
-            </td>
-            <td class="product-description">
-                {% if row['Titel'] %}
-                    <div class="product-title">{{ row['Titel'] }}</div>
-                {% endif %}
-                <div class="product-text">{{ row['Abmessungen'] or '' }}</div>
-            </td>
-            <td>
-                {% if row.Menge is not none %}
-                    {% if row.Menge == row.Menge|int %}
-                        {{ row.Menge|int }}
-                    {% else %}
-                        {% set formatted = "%.2f"|format(row.Menge) %}
-                        {{ formatted.replace('.', ',') }}
-                    {% endif %}
-                {% endif %}
-            </td>
-            <td>{{ row.Preis | german_currency }} €</td>
-            <td>
-                {% if row.Menge is not none %}
-                    {{ row.Gesamtpreis | german_currency }} €
-                {% else %}
-                    {{ row.Preis | german_currency }} €
-                {% endif %}
-            </td>
-        </tr>
+    <tr class="product-row{% if loop.index > 1 %} no-split{% endif %}">
+    <td><strong>{{ row['Positionsbezeichnung'] }}</strong></td>
+    <td>
+    {% if row['image'] %}
+    <img src="{{ row['image'] }}" class="product-img">
+    {% endif %}
+    </td>
+    <td class="product-description">
+    {% if row['Alternative'] == True %}
+    <div class="product-alternative">Alternativ-Option</div>
+    {% endif %}
+    {% if row['Titel'] %}
+    <div class="product-title">
+    {{ row['Titel'] }}
+    </div>
+    {% endif %}
+    <div class="product-text">{{ row['Abmessungen'] or '' }}</div>
+    </td>
+    <td>
+    {% if not row.Alternative and row.Menge is not none %}
+        {% if row.Menge == row.Menge|int %}
+            {{ row.Menge|int }}
+        {% else %}
+            {% set formatted = "%.2f"|format(row.Menge) %}
+            {{ formatted.replace('.', ',') }}
         {% endif %}
+    {% endif %}
+    </td>
+    <td>{{ row.Preis | german_currency }} €</td>
+    <td>
+    {% if not row.Alternative %}
+        {% if row.Menge is not none %}
+        {{ row.Gesamtpreis | german_currency }} €
+        {% else %}
+        {{ row.Preis | german_currency }} €
+        {% endif %}
+    {% endif %}
     {% endfor %}
 
     </tbody>
