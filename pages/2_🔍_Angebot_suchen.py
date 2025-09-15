@@ -219,7 +219,7 @@ if selected_label != "-- Bitte auswählen --":
                         if r["ok"] and r["row"] and r["image_url"]
                         and r["row"].get("Art_Nr") not in st.session_state["images_2"]
                     ]
-                image_bar = st.progress(0, text=f"🔄 0 / {total} Bilder wurden verarbeitet...")
+                image_bar = st.progress(0, text=f"🔄 0 / {total} Produktbilder wurden verarbeitet...")
                 with ThreadPoolExecutor(max_workers=10) as ex:
                     futures = [ex.submit(process_image, art, url) for art, url in todo]
 
@@ -228,7 +228,9 @@ if selected_label != "-- Bitte auswählen --":
                         if img is not None:
                             # ✅ safe: update session only in main thread
                             st.session_state["images_2"][art_nr] = img
-                        image_bar.progress(int(done / total * 100), text=f"🔄 {done} / {total} Produkte wurden verarbeitet...")
+                        else:
+                            st.session_state["images_2"][art_nr] = Image.open("assets/logo.png")
+                        image_bar.progress(int(done / total * 100), text=f"🔄 {done} / {total} Produktbilder wurden verarbeitet...")
 
 
                 if failed:
@@ -294,6 +296,8 @@ if selected_label != "-- Bitte auswählen --":
                                 st.session_state['images_2'][art_nr] = Image.open(BytesIO(db_image))
                             except Exception:
                                 st.session_state['images_2'][art_nr] = Image.open("assets/logo.png")
+                        else:
+                            st.session_state['images_2'][art_nr] = Image.open("assets/logo.png")
 
                 st.session_state["product_df_2"] = edited_df
 

@@ -179,7 +179,7 @@ def get_angebot_template():
 
     /* Customer block */
     .customer-block {
-        font-size: 11px;            /* Make it bigger */
+        font-size: 9px;            /* Make it bigger */
         line-height: 1.2;           /* Improve readability */
         margin-left: 0px;          /* Align exactly with table */
         margin-right: 30px;
@@ -187,7 +187,7 @@ def get_angebot_template():
     }
 
     .customer-block p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.3;
         margin: 0;
     }
@@ -197,7 +197,7 @@ def get_angebot_template():
     }
 
     .anschreiben p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.6;
         margin: 0;
         padding: 0;
@@ -302,7 +302,7 @@ def get_angebot_template():
 
     <div class="header">
     <div class="customer-block">
-        <p style="font-size: 16px;"><strong>{{ kunde['Firma'] }}</strong></p>
+        <p style="font-size: 13px;"><strong>{{ kunde['Firma'] }}</strong></p>
         <p>{{ kunde['Anrede'] }} {{ kunde['Vorname'] }} {{ kunde['Nachname'] }}</p>
         <p>{{ kunde['Adresse'] }}</p>
         <p>{{ kunde['PLZ'] }} {{ kunde['Ort'] }}</p>
@@ -315,7 +315,7 @@ def get_angebot_template():
     </div>
 
     <div class="angebot-row">
-    <div class="angebot-title">Angebot: {{ angebot_id }}</div>
+    <div class="angebot-title" style="font-size: 13px;">Angebot: {{ angebot_id }}</div>
     <div class="angebot-datum">{{ aktuelles_datum }}</div>
     </div>
 
@@ -865,7 +865,7 @@ def get_auftrag_template():
 
     /* Customer block */
     .customer-block {
-        font-size: 11px;            /* Make it bigger */
+        font-size: 9px;            /* Make it bigger */
         line-height: 1.2;           /* Improve readability */
         margin-left: 0px;          /* Align exactly with table */
         margin-right: 30px;
@@ -873,7 +873,7 @@ def get_auftrag_template():
     }
 
     .customer-block p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.3;
         margin: 0;
     }
@@ -884,7 +884,7 @@ def get_auftrag_template():
     }
 
     .anschreiben p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.6;
         margin: 0;
         padding: 0;
@@ -989,7 +989,7 @@ def get_auftrag_template():
 
     <div class="header">
     <div class="customer-block">
-        <p style="font-size: 16px;"><strong>{{ kunde['Firma'] }}</strong></p>
+        <p style="font-size: 13px;"><strong>{{ kunde['Firma'] }}</strong></p>
         <p>{{ kunde['Anrede'] }} {{ kunde['Vorname'] }} {{ kunde['Nachname'] }}</p>
         <p>{{ kunde['Adresse'] }}</p>
         <p>{{ kunde['PLZ'] }} {{ kunde['Ort'] }}</p>
@@ -1002,7 +1002,7 @@ def get_auftrag_template():
     </div>
 
     <div class="angebot-row">
-    <div class="angebot-title">Auftragsbestätigung: {{ angebot_id }}</div>
+    <div class="angebot-title" style="font-size: 13px;">Auftragsbestätigung: {{ angebot_id }}</div>
     <div class="angebot-datum">{{ aktuelles_datum }}</div>
     </div>
 
@@ -1554,7 +1554,7 @@ def get_short_angebot_template():
 
     /* Customer block */
     .customer-block {
-        font-size: 11px;            /* Make it bigger */
+        font-size: 9px;            /* Make it bigger */
         line-height: 1.2;           /* Improve readability */
         margin-left: 0px;          /* Align exactly with table */
         margin-right: 30px;
@@ -1562,7 +1562,7 @@ def get_short_angebot_template():
     }
 
     .customer-block p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.3;
         margin: 0;
     }
@@ -1573,7 +1573,7 @@ def get_short_angebot_template():
     }
 
     .anschreiben p {
-        font-size: 11px;
+        font-size: 9px;
         line-height: 1.6;
         margin: 0;
         padding: 0;
@@ -1678,7 +1678,7 @@ def get_short_angebot_template():
 
     <div class="header">
     <div class="customer-block">
-        <p style="font-size: 16px;"><strong>{{ kunde['Firma'] }}</strong></p>
+        <p style="font-size: 13px;"><strong>{{ kunde['Firma'] }}</strong></p>
         <p>{{ kunde['Anrede'] }} {{ kunde['Vorname'] }} {{ kunde['Nachname'] }}</p>
         <p>{{ kunde['Adresse'] }}</p>
         <p>{{ kunde['PLZ'] }} {{ kunde['Ort'] }}</p>
@@ -1691,7 +1691,7 @@ def get_short_angebot_template():
     </div>
 
     <div class="angebot-row">
-    <div class="angebot-title">Auftragsbestätigung: {{ angebot_id }}</div>
+    <div class="angebot-title" style="font-size: 13px;">Kurzes Angebot: {{ angebot_id }}</div>
     <div class="angebot-datum">{{ aktuelles_datum }}</div>
     </div>
 
