@@ -11,3 +11,6 @@ __pycache__/
 
 # Example.py
 scrape-tester.py
+
+# draw.io file
+*.drawio
