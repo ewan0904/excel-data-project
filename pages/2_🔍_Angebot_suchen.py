@@ -242,6 +242,11 @@ if selected_label != "-- Bitte auswählen --":
     # --- Produkt-Tabelle Bearbeiten ---
     with st.expander("✏️📦 **Produkte bearbeiten**"):
         editable_columns = ["Position", "2. Position", "Art_Nr", "Titel", "Beschreibung", "Menge", "Preis", "Gesamtpreis", "Hersteller", "Breite", "Tiefe", "Höhe", "Alternative"]
+
+        # Ensure Menge is float
+        if "Menge" in st.session_state["product_df_2"].columns:
+            st.session_state["product_df_2"]["Menge"] = (pd.to_numeric(st.session_state["product_df_2"]["Menge"], errors="coerce").astype(float))
+
         edited_df = st.data_editor(
             st.session_state["product_df_2"].reset_index(drop=True),
             use_container_width=True,
