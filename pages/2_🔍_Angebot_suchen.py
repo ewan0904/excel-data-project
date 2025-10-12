@@ -249,7 +249,7 @@ if selected_label != "-- Bitte auswählen --":
 
         edited_df = st.data_editor(
             st.session_state["product_df_2"].reset_index(drop=True),
-            use_container_width=True,
+            width="stretch",
             num_rows="dynamic",
             column_order=editable_columns,
             column_config={
@@ -506,6 +506,22 @@ if selected_label != "-- Bitte auswählen --":
             customer_id=selected_invoice_row.iloc[0]["customer_id"],
             )
         st.success("✅ Angebot wurde erfolgreich gespeichert.")
+
+    if st.sidebar.button("📄 Angebot duplizieren"):
+        post_duplicate_offer(
+            customer=st.session_state["customer_information_2"],
+            products=st.session_state["product_df_2"]
+            )
+        reset() # Resets it, so the user has to use the second tab to further work on the offer
+        st.session_state["selected_label"] = "-- Bitte auswählen --"
+
+        # 🔄 Reload updated invoice list
+        st.session_state["all_invoices_df"] = pd.DataFrame(get_all_invoices())
+        st.session_state["all_invoices_df"]["label"] = st.session_state["all_invoices_df"].apply(
+            lambda row: f'{row["offer_id"]} | {row["company"]} | {row["first_name"]} {row["surname"]}', axis=1)
+
+        st.rerun()
+        st.success("✅ Angebot wurde erfolgreich dupliziert.")
 
     with st.sidebar.popover("❌ Eintrag löschen"):
             st.markdown("""

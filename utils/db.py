@@ -249,6 +249,31 @@ def post_image(products, images, max_threads=20):
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         executor.map(upload_image, products.to_dict(orient="records"))
 
+def post_customer_offer(customer):
+    """
+    Uploads customer data to Firestore and returns the generated document ID.
+
+    Args:
+        customer (dict): Customer data.
+    """
+    # Store the information of customer and retrieve the auto-generated ID
+    filtered_state = {k: v for k, v in customer.items()}
+    _, customer_doc_ref = db.collection("customers").add(filtered_state)
+    customer_doc_id = customer_doc_ref.id
+
+    # Store the offer in the database
+    angebot_Kunden_ID = {
+        "Angebots_ID": customer["Angebots_ID"],
+        "Kunden_ID": customer_doc_id,
+        "rabatt": 0,
+        "payment_details": "",
+        "mwst": True,
+        "atu": "",
+        "created_at": firestore.SERVER_TIMESTAMP
+    }
+
+    db.collection("invoices").add(angebot_Kunden_ID)
+
 def post_offer(customer, products, images):
     """
     Uploads a new offer to Firestore including customer info, product list, and images.
@@ -259,7 +284,7 @@ def post_offer(customer, products, images):
         images (dict): Dictionary of images keyed by article number.
     """
     # Store the information of customer and retrieve the auto-generated ID
-    filtered_state = {k: v for k, v in customer.items() if k != "Angebots_ID"}
+    filtered_state = {k: v for k, v in customer.items()}
     _, customer_doc_ref = db.collection("customers").add(filtered_state)
     customer_doc_id = customer_doc_ref.id
 
@@ -285,6 +310,55 @@ def post_offer(customer, products, images):
         
         # Add to subcollection "products" under the offer
         angebot_doc_ref.collection("products").add(clean_row)
+
+def post_duplicate_offer(customer, products):
+    """
+    Makes a copy of an invoice and changes the Angebots_ID to a new one (.01).
+    """
+    # Determine the new Angebots_ID
+    if "." in customer["Angebots_ID"]:
+        base_id = customer["Angebots_ID"].split(".")[0]
+    else:
+        base_id = customer["Angebots_ID"]
+
+    versions = [
+        int(o["offer_id"].split(".")[1])
+        for o in get_all_invoices()
+        if o["offer_id"].startswith(base_id + ".") and o["offer_id"].split(".")[1].isdigit()
+    ]
+
+    next_version = max(versions, default=0) + 1
+    new_angebot_id = f"{base_id}.{next_version:02d}"
+
+    # Store the information of customer and retrieve the auto-generated ID
+    customer["Angebots_ID"] = new_angebot_id
+    filtered_state = {k: v for k, v in customer.items()}
+    _, customer_doc_ref = db.collection("customers").add(filtered_state)
+    customer_doc_id = customer_doc_ref.id
+
+
+    # Store the offer in the database
+    angebot_Kunden_ID = {
+        "Angebots_ID": new_angebot_id,
+        "Kunden_ID": customer_doc_id,
+        "rabatt": 0,
+        "payment_details": "",
+        "mwst": True,
+        "atu": "",
+        "created_at": firestore.SERVER_TIMESTAMP
+    }
+
+    _, angebot_doc_ref = db.collection("invoices").add(angebot_Kunden_ID)
+
+    # Store the products of the offers as a subcollection
+    products_ref = angebot_doc_ref.collection("products")
+
+    for row in products.to_dict(orient="records"):
+        # Ensure all values are Firestore-compatible
+        clean_row = {k: (bool(v) if k == "Alternative" else v) for k, v in row.items()}
+        
+        # Add updated subcollection "products" under the offer
+        products_ref.add(clean_row)
 
 # ---------------------
 # --- PUT Firestore ---
@@ -343,6 +417,7 @@ def put_offer(customer, products, images, angebots_id, customer_id):
 
     # Update standard invoice information
     db.collection("invoices").document(angebots_id).update({
+        "Angebots_ID": st.session_state["customer_information_2"]["Angebots_ID"],
         "rabatt": st.session_state["rabatt"],
         "payment_details": st.session_state["payment_details"],
         "mwst": st.session_state["mwst"],

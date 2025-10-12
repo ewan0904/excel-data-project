@@ -260,32 +260,45 @@ def find_gh_information(url, position):
     desc_container = soup.find("div", {"data-tracking": "product.tab-container.description"})
     if desc_container:
 
-        tab_content = desc_container.select_one(".tab-content--have-gradient")
+        tab_content = desc_container.select_one(".tab-content")
+
         if tab_content:
             skip_next_ul = False
-            found_advantages = False
 
-            for tag in tab_content.find_all(["p", "ul"]):
+            tags = tab_content.find_all(["strong", "ul"])
+            for i, tag in enumerate(tags):
+                # Check the next tag (if it exists)
+                if i + 1 < len(tags):
+                    next_tag = tags[i + 1]
+                else:
+                    next_tag = None
+
                 text = tag.get_text(strip=True)
                 text_lower = text.lower()
-
-                # Check for "Produktvorteile im Überblick"
-                if "produktvorteile im überblick" in text_lower:
-                    found_advantages = True
+                
+                # Skip certain sections based on keywords
+                if next_tag and next_tag.name == "ul" and any(k in text_lower for k in ["produktvorteile im überblick", "hinweis"]):
                     skip_next_ul = True  # skip the list that follows
                     continue
 
-                # If we're skipping the <ul> that immediately follows the heading
+                # Check for <strong> tags that are immediately followed by another <strong> or non-<ul> tag
+                if tag.name == "strong" and next_tag and next_tag.name != "ul":
+                    continue
+                
+                # Skip <strong> tags that contain "Hinweis"
+                if tag.name == "strong" and "hinweis" in text_lower:
+                    continue
+
+                # Skip <strong> tags that are inside a <ul>
+                if tag.name == "strong" and tag.find_parent("ul"):
+                    continue  # ignore this <strong> because it's within a list
+
                 if skip_next_ul and tag.name == "ul":
                     skip_next_ul = False  # skip this one and stop skipping
                     continue
 
-                # If it's before the "Produktvorteile" section, ignore
-                if not found_advantages:
-                    continue
-
                 # Otherwise, keep the content
-                if tag.name == "p" and text:
+                if tag.name == "strong" and text:
                     if description == "":
                         description += f"{text}"
                     else:
