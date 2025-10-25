@@ -249,7 +249,7 @@ if selected_label != "-- Bitte auswählen --":
 
         edited_df = st.data_editor(
             st.session_state["product_df_2"].reset_index(drop=True),
-            width="stretch",
+            use_container_width=True,
             num_rows="dynamic",
             column_order=editable_columns,
             column_config={
