@@ -13,7 +13,7 @@ import re
 from PIL import Image
 from utils.excel_generator import generate_excel_file
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from assets.html_structure import get_angebot_template, get_auftrag_template, get_short_angebot_template
+from assets.html_structure import get_angebot_template, get_auftrag_template, get_short_angebot_template, get_angebot_wo_price_template
 
 # Authentication
 require_login()
@@ -267,7 +267,7 @@ if selected_label != "-- Bitte auswählen --":
             key="editable_products_2"
         )
 
-        col1, col2, _ = st.columns([3, 2, 7])
+        col1, col2, col3 = st.columns([3, 2, 7])
         with col1:
             if st.button("💾 Änderungen speichern"):
                 # Check if there are any missing or empty values in the required columns
@@ -319,6 +319,59 @@ if selected_label != "-- Bitte auswählen --":
                     by=["Position", "2. Position"], na_position="last"
                 ).reset_index(drop=True)
                 st.session_state["product_df_2"] = sorted_df
+                st.rerun()
+
+        with col3:
+            if st.button("➕ IP/TK/MK hinzufügen"):
+                pos_id = st.session_state["product_df_2"]["Position"].max()
+                ip_tk_mk_df = pd.DataFrame([
+                    {
+                        "Position": pos_id + 1,
+                        "2. Position": None,
+                        "Art_Nr": "IP",
+                        "Titel": "Installationsplan",
+                        "Beschreibung": "Erstellung eines Installationsplans für die\nPositionierung der erforderlichen Anschlüsse\nAnfahrten durch unseren Außendienst zum Objekt\nwerden nach Absprache und Aufwand berechnet.",
+                        "Menge": 1,
+                        "Preis": 0.0,
+                        "Gesamtpreis": 0.0,
+                        "Hersteller": "",
+                        "Alternative": False,
+                        "Breite": None,
+                        "Tiefe": None,
+                        "Höhe": None
+                    },
+                    {
+                        "Position": pos_id + 2,
+                        "2. Position": None,
+                        "Art_Nr": "TK",
+                        "Titel": "Lieferkosten",
+                        "Beschreibung": "Lieferanschrift in DE",
+                        "Menge": 1,
+                        "Preis": 0.0,
+                        "Gesamtpreis": 0.0,
+                        "Hersteller": "",
+                        "Alternative": False,
+                        "Breite": None,
+                        "Tiefe": None,
+                        "Höhe": None
+                    },
+                    {
+                        "Position": pos_id + 3,
+                        "2. Position": None,
+                        "Art_Nr": "MK",
+                        "Titel": "Montagekosten",
+                        "Beschreibung": "Anfahrt & Montage\nÜbernachtungskosten werden gesondert abgerechnet",
+                        "Menge": 1,
+                        "Preis": 0.0,
+                        "Gesamtpreis": 0.0,
+                        "Hersteller": "",
+                        "Alternative": False,
+                        "Breite": None,
+                        "Tiefe": None,
+                        "Höhe": None
+                    }
+                ])
+                st.session_state["product_df_2"] = pd.concat([st.session_state["product_df_2"], ip_tk_mk_df], ignore_index=True)
                 st.rerun()
 
     # --- Produktbilder Anzeigen / Hochladen ---
@@ -410,8 +463,42 @@ if selected_label != "-- Bitte auswählen --":
                 file_name=file_name,
                 mime="application/pdf"
             )
-    
+
     st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
+    
+    # --- Angebot ohne Preise-PDF Erstellung ---
+    st.sidebar.subheader("Angebot ohne Preise")
+    if st.sidebar.button("📄 Angebot ohne Preise anzeigen"):
+        try:
+            pdf_path = build_pdf(
+                product_df=st.session_state["product_df_2"],
+                customer_df=pd.DataFrame([st.session_state["customer_information_2"]]),
+                custom_images=st.session_state["images_2"],
+                template_type=get_angebot_wo_price_template(),
+                rabatt=st.session_state["rabatt"],
+                payment_details = st.session_state["payment_details"],
+                if_mwst=st.session_state["mwst"],
+                atu=st.session_state["atu"]
+            )
+            st.session_state["pdf_angebot_wo_price"] = pdf_path
+            st.success("✅ PDF wurde erfolgreich erstellt.")
+            pdf_preview(pdf_path)
+        except ValueError as e:
+            st.error(f"❌ {e}")
+
+    # --- Angebot ohne Preise-PDF Download
+    if st.session_state.get("pdf_angebot_wo_price"):
+        file_name = f"angebot_ohne_preise_{st.session_state['customer_information_2']['Firma']}_{st.session_state['customer_information_2']['Angebots_ID']}.pdf"
+        with open(st.session_state["pdf_angebot_wo_price"], "rb") as f:
+            st.sidebar.download_button(
+                label="⬇️ Angebot herunterladen",
+                data=f,
+                file_name=file_name,
+                mime="application/pdf"
+            )
+
+    st.sidebar.markdown("<hr style='margin: 2px 0;'>", unsafe_allow_html=True)
+    
 
     # --- Auftrag-PDF Erstellung ---
     st.sidebar.subheader("Auftrag-Erstellung")

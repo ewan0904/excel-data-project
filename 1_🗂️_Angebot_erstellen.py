@@ -68,8 +68,8 @@ with st.form("Speichern"):
 
             with st.spinner():
                 st.success("Kunden-Informationen gespeichert!")
-    else:
-        st.warning("Bitte fülle alle Informationen aus.")
+        else:
+            st.error("Bitte fülle alle Informationen aus.")
 
 # ---------------
 # --- Sidebar ---
@@ -79,15 +79,21 @@ with st.form("Speichern"):
 st.sidebar.write("**Datenbank**")
 if st.sidebar.button("💾 In Datenbank speichern"):
 
-    # Make all Alternative values False by default
-    #st.session_state["product_df_1"]['Alternative'] = st.session_state["product_df_1"]['Alternative'].fillna(False).astype(bool)
+    # List of mandatory fields
+    required_fields = ["Vorname", "Nachname", "Firma", "Adresse", "PLZ", "Ort", "Angebots_ID"]
 
-    post_customer_offer(
-        customer=st.session_state["customer_information_1"],
-        )
-    reset() # Resets it, so the user has to use the second tab to further work on the offer
-    st.rerun()
-    st.success("✅ Angebot wurde erfolgreich gespeichert.")
+    # Check
+    missing = [field for field in required_fields if not st.session_state["customer_information_1"][field].strip()]
+
+    if missing:
+        st.error(f"❗ Bitte fülle folgende Felder aus: {', '.join(missing)}")
+    else:
+        post_customer_offer(
+            customer=st.session_state["customer_information_1"],
+            )
+        reset()
+        st.rerun()
+        st.success("✅ Angebot wurde erfolgreich gespeichert.")
 
 # Button to log out
 

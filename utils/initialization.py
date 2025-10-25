@@ -67,6 +67,9 @@ def initialize_session_state_angebot_suchen():
     if "pdf_short" not in st.session_state:
         st.session_state["pdf_short"] = ""
 
+    if "pdf_angebot_wo_price" not in st.session_state:
+        st.session_state["pdf_angebot_wo_price"] = ""
+
     if "images_2" not in st.session_state:
         st.session_state["images_2"] = {}
     
