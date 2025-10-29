@@ -14,3 +14,5 @@ scrape-tester.py
 
 # draw.io file
 *.drawio
+
+scraping_testing.py

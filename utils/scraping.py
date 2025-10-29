@@ -59,6 +59,8 @@ def process_url(url, idx):
             row, image_url = find_s24_information(url, idx)
         elif "intergastro.de" in url:
             row, image_url = find_ig_information(url, idx)
+        elif "gastrodax.de" in url:
+            row, image_url = find_gdax_information(url, idx)
         return {"ok": True, "row": row, "image_url": image_url}
     except Exception as e:
         return {"ok": False, "idx": idx, "err": str(e), "url": url}
@@ -957,5 +959,107 @@ def find_ig_information(url, position):
         image_img = image_div.find('img')
         if image_img:
             image_url = f"https://www.intergastro.de{image_img.get('src')}"
+
+    return new_row, image_url
+
+def find_gdax_information(url, position):
+    api_soup = get_soup(url)
+    soup = BeautifulSoup(api_soup, 'html.parser')
+
+    # ---------------- Hersteller -------------
+    hersteller = "GDAX"
+
+    # ---------------- Article ----------------
+    article_number = ""
+
+    article_div = soup.find('div', {'class': 'product-shop'})
+    if article_div:
+        product_div = article_div.find('p', {'class': 'sku'})
+        if product_div:
+            product_span = product_div.find('span')
+            if product_span:
+                article_number = product_span.get_text(strip=True)
+
+    # ---------------- Title ------------------
+    title = ""
+    if article_div:
+        title_li = article_div.find('li', {'class': 'title'})
+        if title_li:
+            title_h1 = title_li.find('h1')
+            if title_h1:
+                title = title_h1.get_text(strip=True)
+
+    # ---------------- Description-------------
+    description = ""
+    abmessungen = {}
+    produkt_beschreibung_div = soup.find('div', {'class': 'product-collateral'})
+    if produkt_beschreibung_div:
+        # produkt_strong = produkt_beschreibung_div.find(['strong', 'h3'], string=re.compile("Technische Daten", re.I))
+        produkt_strong = produkt_beschreibung_div.find(["strong", "h3"],string=lambda t: t and re.search("Technische Daten", t, re.I))
+        if produkt_strong:
+            description += "Technische Daten\n"
+            product_ul = produkt_strong.find_next('ul')
+            if product_ul:
+                for li in product_ul.find_all('li'):
+                    item_text = li.get_text()
+                    if item_text:
+                        text = re.sub(r"\s+", " ", item_text).replace("\xa0", " ").strip()
+                        description += f"• {text}\n"
+
+    produkt_details_div = soup.find('div', {'id': 'additional_tabbed'})
+    if produkt_details_div:
+        details_text = "\nDetails\n"
+        details_tr = produkt_details_div.find_all('tr')
+        for tr in details_tr:
+            cells = tr.find_all('td')
+            if len(cells) >= 2:
+              label_text = cells[0].get_text(strip=True)
+              value_text = cells[1].get_text(strip=True)
+              details_text += f"• {label_text}: {value_text}\n"
+        
+        if details_text != "\nDetails\n":
+            description += details_text
+    description = description.strip()
+
+    # ---------------- Price ------------------
+    price = None
+    price_div = soup.find('p', {'class': 'regular-price'})
+    if price_div:
+        price_span = price_div.find('span', {'class': 'price'})
+        if price_span:
+            price_second_span = price_span.find('span')
+            if price_second_span:
+                price_raw = price_second_span.get_text(strip=True)
+                if price_raw:
+                    price_raw = price_raw.replace(".", "").replace(",", ".").replace("€", "").strip()
+                    price = float(price_raw)
+
+    # ---------------- Create row -------------
+    new_row = {
+        'Position': position,
+        '2. Position': '',
+        'Art_Nr': article_number,
+        'Titel': title,
+        'Beschreibung': description,
+        'Menge': 1,
+        'Preis': price,
+        'Gesamtpreis': price,
+        'Hersteller': hersteller,
+        'Alternative': False,
+        'Breite': abmessungen.get('Breite') if abmessungen.get('Breite') else None,
+        'Tiefe': abmessungen.get('Tiefe') if abmessungen.get('Tiefe') else None,
+        'Höhe': abmessungen.get('Höhe') if abmessungen.get('Höhe') else None,
+        'Url': url
+    }
+
+    # ---------------- Image ------------------
+    image_url = ""
+    image_div = soup.find('div', {'class': 'product-img-box'})
+    if image_div:
+        image_div_2 = image_div.find('div', {'class': 'product-image'})
+        if image_div_2:
+            image_img = image_div_2.find('img')
+            if image_img:
+                image_url = image_img.get('src')
 
     return new_row, image_url
