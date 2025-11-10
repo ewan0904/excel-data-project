@@ -1015,8 +1015,8 @@ def get_auftrag_template():
     <p>Sehr geehrte Damen und Herren,</p>
     {% endif %}
     <p>für Ihren Auftrag und Ihr Interesse an unseren Produkten und Dienstleistungen dürfen wir uns bedanken.</p> 
-    <p>Gerne bieten wir Ihnen wie folgt an.</p>
-    <p>Bei Fragen stehen wir Ihnen gerne jeder Zeit zur Verfügung.</p>
+    <p>Gerne bestätigen wir Ihnen wie folgt.</p>
+    <p>Für Fragen stehen wir Ihnen gerne jeder Zeit zur Verfügung.</p>
     </div>
     <table>
     <colgroup>
