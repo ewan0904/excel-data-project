@@ -117,11 +117,11 @@ def build_pdf(product_df, customer_df, custom_images, template_type, rabatt, pay
         # Abmessungen
         abmessungen = ""
         if pd.notna(row.get('Breite')):
-            abmessungen += f"Breite: {int(row.get('Breite'))} mm\n"
+            abmessungen += f"Breite: {float(row.get('Breite'))} mm\n"
         if pd.notna(row.get('Tiefe')):
-            abmessungen += f"Tiefe: {int(row.get('Tiefe'))} mm\n"
+            abmessungen += f"Tiefe: {float(row.get('Tiefe'))} mm\n"
         if pd.notna(row.get('Höhe')):
-            abmessungen += f"Höhe: {int(row.get('Höhe'))} mm"
+            abmessungen += f"Höhe: {float(row.get('Höhe'))} mm"
 
         rows.append({
             "Positionsbezeichnung": pos_label,
