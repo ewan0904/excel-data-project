@@ -24,9 +24,9 @@ def get_angebot_template():
     @bottom-left {
         content: "────────────────────────────────────────────" "\A"
                 "Bankverbindung" "\A"
-                "Volksbank Schnathorst" "\A"
-                "IBAN: DE96 4926 2364 0070 4710 00" "\A"
-                "BIC: GENODEM1SNA";
+                "Verbundvolksbank OWL" "\A"
+                "IBAN: DE22 4726 0121 8335 4209 00" "\A"
+                "BIC: DGPBDE3MXXX";
         white-space: pre;
     }
 
@@ -34,16 +34,16 @@ def get_angebot_template():
         content: "──────────────────────────────────────────────" "\A" 
                 "T.P.O." "\A"
                 "Inh. Daniela Gross" "\A"
-                "In den Fichten 34" "\A"
-                "32584 Löhne";
+                "Weserstraße 153" "\A"
+                "32547 Bad Oeynhausen";
         white-space: pre;
     }
 
     @bottom-right {
         content: "────────────────────────────────────────────" "\A"
-                "Tel: 05731 755 13 11" "\A"
-                "Fax: 05731 755 13 12" "\A"
+                "Tel: 05731 58 32" "\A"
                 "Mail: tpo-gross@outlook.com" "\A"
+                "Web: www.tpo.gross.de" "\A"
                 "UST-IdNr.: DE31 8295 117";
         white-space: pre;
     }
@@ -710,9 +710,9 @@ def get_auftrag_template():
     @bottom-left {
         content: "────────────────────────────────────────────" "\A"
                 "Bankverbindung" "\A"
-                "Volksbank Schnathorst" "\A"
-                "IBAN: DE96 4926 2364 0070 4710 00" "\A"
-                "BIC: GENODEM1SNA";
+                "Verbundvolksbank OWL" "\A"
+                "IBAN: DE22 4726 0121 8335 4209 00" "\A"
+                "BIC: DGPBDE3MXXX";
         white-space: pre;
     }
 
@@ -720,16 +720,16 @@ def get_auftrag_template():
         content: "──────────────────────────────────────────────" "\A" 
                 "T.P.O." "\A"
                 "Inh. Daniela Gross" "\A"
-                "In den Fichten 34" "\A"
-                "32584 Löhne";
+                "Weserstraße 153" "\A"
+                "32547 Bad Oeynhausen";
         white-space: pre;
     }
 
     @bottom-right {
         content: "────────────────────────────────────────────" "\A"
-                "Tel: 05731 755 13 11" "\A"
-                "Fax: 05731 755 13 12" "\A"
+                "Tel: 05731 58 32" "\A"
                 "Mail: tpo-gross@outlook.com" "\A"
+                "Web: www.tpo.gross.de" "\A"
                 "UST-IdNr.: DE31 8295 117";
         white-space: pre;
     }
@@ -1399,9 +1399,9 @@ def get_short_angebot_template():
     @bottom-left {
         content: "────────────────────────────────────────────" "\A"
                 "Bankverbindung" "\A"
-                "Volksbank Schnathorst" "\A"
-                "IBAN: DE96 4926 2364 0070 4710 00" "\A"
-                "BIC: GENODEM1SNA";
+                "Verbundvolksbank OWL" "\A"
+                "IBAN: DE22 4726 0121 8335 4209 00" "\A"
+                "BIC: DGPBDE3MXXX";
         white-space: pre;
     }
 
@@ -1409,16 +1409,16 @@ def get_short_angebot_template():
         content: "──────────────────────────────────────────────" "\A" 
                 "T.P.O." "\A"
                 "Inh. Daniela Gross" "\A"
-                "In den Fichten 34" "\A"
-                "32584 Löhne";
+                "Weserstraße 153" "\A"
+                "32547 Bad Oeynhausen";
         white-space: pre;
     }
 
     @bottom-right {
         content: "────────────────────────────────────────────" "\A"
-                "Tel: 05731 755 13 11" "\A"
-                "Fax: 05731 755 13 12" "\A"
+                "Tel: 05731 58 32" "\A"
                 "Mail: tpo-gross@outlook.com" "\A"
+                "Web: www.tpo.gross.de" "\A"
                 "UST-IdNr.: DE31 8295 117";
         white-space: pre;
     }
@@ -1833,9 +1833,9 @@ def get_angebot_wo_price_template():
     @bottom-left {
         content: "────────────────────────────────────────────" "\A"
                 "Bankverbindung" "\A"
-                "Volksbank Schnathorst" "\A"
-                "IBAN: DE96 4926 2364 0070 4710 00" "\A"
-                "BIC: GENODEM1SNA";
+                "Verbundvolksbank OWL" "\A"
+                "IBAN: DE22 4726 0121 8335 4209 00" "\A"
+                "BIC: DGPBDE3MXXX";
         white-space: pre;
     }
 
@@ -1843,16 +1843,16 @@ def get_angebot_wo_price_template():
         content: "──────────────────────────────────────────────" "\A" 
                 "T.P.O." "\A"
                 "Inh. Daniela Gross" "\A"
-                "In den Fichten 34" "\A"
-                "32584 Löhne";
+                "Weserstraße 153" "\A"
+                "32547 Bad Oeynhausen";
         white-space: pre;
     }
 
     @bottom-right {
         content: "────────────────────────────────────────────" "\A"
-                "Tel: 05731 755 13 11" "\A"
-                "Fax: 05731 755 13 12" "\A"
+                "Tel: 05731 58 32" "\A"
                 "Mail: tpo-gross@outlook.com" "\A"
+                "Web: www.tpo.gross.de" "\A"
                 "UST-IdNr.: DE31 8295 117";
         white-space: pre;
     }
