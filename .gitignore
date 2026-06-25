@@ -16,3 +16,15 @@ scrape-tester.py
 *.drawio
 
 scraping_testing.py
+launch.py
+
+db-download.py
+key.json
+
+data-migration.ipynb
+db-download-jens.ipynb
+db-download.ipynb
+db-invoices.xlsx
+db-products.xlsx
+invoices.xlsx
+package.json

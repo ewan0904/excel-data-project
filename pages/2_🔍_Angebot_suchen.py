@@ -129,9 +129,12 @@ if selected_label != "-- Bitte auswählen --":
             results = executor.map(fetch_image, art_nrs)
 
         for art_nr, image in results:
-            st.session_state["images_2"][art_nr] = image
+            if image is not None:
+                st.session_state["images_2"][art_nr] = image
+            else:
+                st.session_state["images_2"][art_nr] = Image.open("assets/logo.png")
 
-        st.session_state["selected_label"] = selected_label
+                st.session_state["selected_label"] = selected_label
     st.write("---")
 
     # --- Main Page ---
